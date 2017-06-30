@@ -34,7 +34,7 @@ class Man extends Thing {
 				}
 				return newSquare.addContents(this);
 			}else if(newSquare.checkHidden()){
-				System.out.println("Hiddent");
+				System.out.println("Hidden");
 			}
 			
 			
@@ -50,8 +50,10 @@ class Man extends Thing {
 					game.squareAt(m.getPushed().getLocation().adjacentLocation(direction)).addContents(m.getPushed());
 				}
 				
-				if (!m.getIsUndo()) 
+				if (!m.getIsUndo()) {
 					game.addMove(undo);
+					//Blocks.track.setNextMove();
+				}
 				return returnValue;
 			}
 		}

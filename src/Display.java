@@ -373,6 +373,10 @@ public class Display extends Frame
     
     public void drawAtLocation(String name, char ch, Location loc)
     {
+    	if(name.equals("Box")){
+    		Blocks.track.setElementAt(loc, Character.getNumericValue(ch));
+    		System.out.print(loc.toString());
+    	}
     	gridCanvas.drawImageAndLetterAtLocation(name, ch, loc);
     }
     

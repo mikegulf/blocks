@@ -37,8 +37,9 @@ class Square
 			// Make sure thing knows where it is
 			c.setSquare(this);
 
+
 			// Draw the contents of the square
-			drawSelf();
+			drawSelf(); 
 
 			if (this instanceof Goal && c instanceof Box && c.pch == this.pch)
 			{

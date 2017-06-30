@@ -72,6 +72,7 @@ public class Blocks{
 	private boolean replayLevel = false;
 	
 	private Grid squares;
+	public static Tracking track;
 
 	public Blocks(Display display)
 	{
@@ -182,18 +183,22 @@ public class Blocks{
             
             Iterator<Move> it = undoMoveHistory.iterator();
 			
-			while(it.hasNext()) {
-		         Move element = new Move(Location.reverseDirection(it.next().getDirection()), true);
-		         
-		         //print the move to the screen
-		         if (Blocks.VERBOSE)
-		         {
-		        	 System.out.print(element);
-		         }
-		         //print to file
-		         out.write(element.toString());
-		      }
+            while(it.hasNext()) {
+            	Move element = new Move(Location.reverseDirection(it.next().getDirection()), true);
 
+            	//print the move to the screen
+            	if (Blocks.VERBOSE)
+            	{
+            		System.out.print(element);
+            	}
+            	//print to file
+            	out.write(element.toString());
+            }
+            
+            //out.write(Arrays.deepToString(track.getGrid()));
+
+            //openFileWriteBlocks("test");
+            
         } catch (IOException ioe) {
         	System.out.println( "Exception: " + ioe); 
         } finally {
@@ -201,6 +206,42 @@ public class Blocks{
             	out.close();
             }
             System.out.println("\n--- File Closed ---");
+            //System.out.println(Arrays.deepToString(track.getGrid()));
+        }
+    }
+	
+	public void openFileWriteBlocks(String filename){
+		
+		Object[][] obj = track.getGrid();
+		
+		PrintWriter out = null;
+        try {
+            out = new PrintWriter(filename);
+            
+            for (int row = 0; row <= track.getCurrentMove(); row++)
+			{
+            	out.write("[");
+				for (int col = 0; col < track.getNumBoxes(); col++)
+				{
+					out.write(obj[row][col].toString());
+					if(col + 1 < track.getNumBoxes())
+						out.write(",");
+				}
+
+				// Skip over newline at end of row
+				out.write("]\n");
+			}
+
+            //System.out.println(Arrays.deepToString(track.getGrid()));
+			
+
+        } catch (IOException ioe) {
+        	System.out.println( "Exception: " + ioe); 
+        } finally {
+            if(out != null){
+            	out.close();
+            }
+            System.out.println("\n--- Blocks File Closed ---");
         }
     }
 
@@ -236,11 +277,13 @@ public class Blocks{
 			if(!replayLevel){
 				int writelevel = level - 1;
 				openFileForWrite(dir + "/" + writelevel + ".txt");
+				openFileWriteBlocks(dir + "/" + writelevel + "blocks.txt");
 				replayNum = 0;
 			}else {
 				int currentLevel = level;
 				char replayChar = alphabet.charAt(replayNum - 1);
 				openFileForWrite(dir + "/" + currentLevel + "" + replayChar + ".txt");
+				openFileWriteBlocks(dir + "/" + currentLevel + "" + replayChar + "blocks.txt");
 				replayLevel = false;
 			}
 		}
@@ -305,6 +348,8 @@ public class Blocks{
 				}
 				break;
 			case Command.Directional:
+				track.setNextMove();
+				track.copyLocationsNextMove();
 				man.move(cmd.getMove());
 				break;
 			case Command.Undo:
@@ -348,8 +393,15 @@ public class Blocks{
 
 		try
 		{
+			//tracking of boxes for each move
+			
+			
 			int numRows = Integer.valueOf(in.readLine().trim()).intValue();
 			int numCols = Integer.valueOf(in.readLine().trim()).intValue();
+			int numBoxes =  Integer.valueOf(in.readLine().trim()).intValue();
+			
+			track = new Tracking(numBoxes);
+			
 			squares = new Grid(numRows, numCols);
 			display.configureForSize(numRows, numCols);
 			display.drawStatusMessage("Loading level " + level + "...");
@@ -404,27 +456,33 @@ public class Blocks{
 			break;
 		case 'a':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '1'));
+			square.addContents(new Box(square, this, '0'));
+			track.setElementAt(location, 0);
 			break;
 		case 'b':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '2'));
+			square.addContents(new Box(square, this, '1'));
+			track.setElementAt(location, 1);
 			break;
 		case 'c':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '3'));
+			square.addContents(new Box(square, this, '2'));
+			track.setElementAt(location, 2);
 			break;
 		case 'd':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '4'));
+			square.addContents(new Box(square, this, '3'));
+			track.setElementAt(location, 3);
 			break;
 		case 'e':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '5'));
+			square.addContents(new Box(square, this, '4'));
+			track.setElementAt(location, 4);
 			break;
 		case 'f':
 			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '6'));
+			square.addContents(new Box(square, this, '5'));
+			track.setElementAt(location, 5);
 			break;
 		// Goals
 		case '*': //goal with box already on it
@@ -434,6 +492,10 @@ public class Blocks{
 			break;
 		case '.': // default goal without number
 			square = new Goal(location, this, '\0');
+			incrementSlots();
+			break;
+		case '0':
+			square = new Goal(location, this, '0');
 			incrementSlots();
 			break;
 		case '1':
