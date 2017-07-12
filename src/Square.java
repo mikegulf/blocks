@@ -27,6 +27,8 @@ class Square
 		if (canEnter())
 		{
 			boolean wasGoal = (c.getSquare() instanceof Goal);
+			
+			char pastPch = c.getSquare().pch;
 
 			c.getSquare().removeContents();
 
@@ -46,7 +48,7 @@ class Square
 				System.out.println("They match");
 				game.decrementSlots();
 			}
-			else if (!(this instanceof Goal) && c instanceof Box && wasGoal && c.pch == this.pch)
+			else if (!(this instanceof Goal) && c instanceof Box && wasGoal && c.pch == pastPch)
 			{
 				game.incrementSlots();
 			}

@@ -348,7 +348,7 @@ public class Blocks{
 				}
 				break;
 			case Command.Directional:
-				track.setNextMove();
+				track.setNextMove(cmd.getMove());
 				track.copyLocationsNextMove();
 				man.move(cmd.getMove());
 				break;
