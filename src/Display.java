@@ -3,11 +3,20 @@
 /* comp285 Display.java
  * --------------
  */
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
 
-import javax.swing.JEditorPane;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.util.List;
+import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import javax.swing.JApplet;
+import javax.swing.JPanel;
+import javax.swing.JTextPane;
 
 
 /**
@@ -18,17 +27,76 @@ import javax.swing.JEditorPane;
  */
 
 
-public class Display extends Frame
+public class Display extends JApplet
 {
+	public Display() {
+	}
+	Blocks game;
+	@Override
+	public void init() {
+		
+		NamedImage.preloadImages(this);	
+    	configureWindow(0, 0);
+    	
+		game = new Blocks(this);
+		
+	}
+	
+	@Override
+	public void start() {
+		String thisLevel = "0";
+		String startLevel = "";
+		
+		for ( int i = 0; i < thisLevel.length(); i++ ) {
+			
+			if(Character.isDigit(thisLevel.charAt(i)))
+				startLevel += String.valueOf(thisLevel.charAt(i));
+		}
+		
+		long startTime = System.currentTimeMillis();
+
+		File directory = new File(Long.toString(startTime));
+        if (!directory.exists()) {
+            if (directory.mkdir()) {
+                System.out.println(directory + " directory was created.");
+            } else {
+                System.out.println(directory + " directory already exists.");
+            }
+        }
+
+		game.play(Integer.valueOf(startLevel), Long.toString(startTime));
+	}
+	
+	@Override
+	public void stop() {
+		getGraphics().dispose();
+		
+	}
+	
 	//inner class GridCanvas
-    public class GridCanvas extends Canvas
+    public class GridCanvas extends JPanel
     {
     	static final long serialVersionUID = 1;
     	
 		private int numRows, numCols, blockSize;
 		private NamedImage blank;
-		private Image offscreenImage;
-		private Graphics offscreenG, onscreenG;
+		private List<BlockImage> images = new CopyOnWriteArrayList<>();
+		
+		private class BlockImage {
+			public Image img;
+			public char ch;
+			public Rectangle r;
+			
+			BlockImage(Rectangle rect, Image i, char c) {
+				r = rect;
+				img = i;
+				ch = c;
+			}
+			
+			public boolean hasChar() {
+				return ch > 0;
+			}
+		}
 		
 		public GridCanvas(int nRows, int nCols, int size)
 		{	
@@ -47,17 +115,6 @@ public class Display extends Frame
 		    return (loc.getRow() < 0 || loc.getRow() >= numRows || loc.getCol() < 0 || loc.getCol() >= numCols);
 		}
 		
-		private void checkImage()
-		{
-		    if (offscreenImage == null)
-		    {
-				Dimension sz = getSize();
-				offscreenImage = createImage(sz.width, sz.height);
-				offscreenG = offscreenImage.getGraphics();
-				onscreenG = getGraphics();
-		    }
-		}
-		
 		private void checkLocation(Location loc)
 		{
 		    if (badLocation(loc))
@@ -71,22 +128,8 @@ public class Display extends Frame
 		    numRows = nRows;
 		    numCols = nCols;
 		    setSize(blockSize*numCols, blockSize*numRows);
-		    
-		    // Just big enough the squares themselves
-		    if (offscreenG != null)
-		    {
-		    	offscreenG.dispose();	
-		    }
-		    
-		    // Throw away previous graphics and re-cache
-		    if (onscreenG != null)
-		    {
-		    	onscreenG.dispose();	
-		    }
-		    
-		    // Throw away previous graphics and re-cache
-		    offscreenImage = null;
-		    offscreenG = onscreenG = null;
+		    images.clear();
+		    repaint();
 		}
 		
 		private void drawCenteredString(Graphics g, String s, Rectangle r)
@@ -108,38 +151,15 @@ public class Display extends Frame
 		private void drawLocation(Location loc, NamedImage ni, char letter)
 		{
 		    Rectangle r = rectForLocation(loc.getRow(), loc.getCol());
-		    checkImage();
 		    
-		    if (ni == null || ni.isBackgroundImage)	
+		    if (letter > 0)
 		    {
-				// Draw blank to erase, or behind background
-				offscreenG.drawImage(blank.image, r.x, r.y, null);
+		    	drawCenteredString(getGraphics(), letter + "", r);
 		    }
 		    
-		    if (ni != null)
-		    {
-				if (!offscreenG.drawImage(ni.image, r.x, r.y, null))
-				{ 
-				    // Try to draw image
-					
-				    // But image not ready or had error drawing
-				    offscreenG.drawImage(blank.image, r.x, r.y, null);
-				    
-				    // Draw background
-				    offscreenG.setColor(Color.gray);
-				    
-				    // Inset a gray box in its place
-				    offscreenG.fillRect(r.x + 1, r.y + 1, r.width - 2, r.height - 2);
-				}
-		    }
+		    images.add(new BlockImage(r, ni.image, letter));
 		    
-		    if (letter != '\0')
-		    {
-		    	drawCenteredString(offscreenG, letter + "", r);
-		    }
-		    
-		    // Repaint(r.x, r.y, r.width, r.height);
-		    onscreenG.drawImage(offscreenImage, r.x, r.y, r.x + r.width, r.y + r.height, r.x, r.y, r.x + r.width, r.y + r.height, null);
+		    repaint(r);
 		}
 		
 		@Override
@@ -149,14 +169,13 @@ public class Display extends Frame
 		}
 		
 		@Override
-		public void paint(Graphics g)
+		public void paintComponent(Graphics g)
 		{
-		    if (offscreenImage != null)
-		    {
-				Rectangle r = g.getClipBounds();
-				
-				// Copy just sub-rect from cache
-				g.drawImage(offscreenImage, r.x, r.y, r.x + r.width, r.y + r.height, r.x, r.y, r.x + r.width, r.y + r.height, null);
+			super.paintComponent(g);
+		    for(BlockImage bi : images) {
+		    	g.drawImage(bi.img, bi.r.x, bi.r.y, bi.r.width, bi.r.height, this);
+		    	if(bi.hasChar())
+		    		drawCenteredString(g, bi.ch + "", bi.r);
 		    }
 		}
 		
@@ -179,6 +198,8 @@ public class Display extends Frame
 		private static MediaTracker mt;
 		private static String things[] = { "Man", "Box" };
 		private static String squares[] = { "Empty", "Wall", "Goal" };
+		private static JApplet app;
+		
 		static public NamedImage findImageNamed(String name)
 		{
 		    return findImageNamed(name, false);
@@ -196,7 +217,7 @@ public class Display extends Frame
 		    // Return shared version
 		    else
 		    {
-				key.image = Toolkit.getDefaultToolkit().getImage("Images" + java.io.File.separator + name + ".gif");
+				key.image = app.getImage(app.getCodeBase(), "Images/" + name + ".gif");
 				
 				// Create image from file
 				mt.addImage(key.image, 0);
@@ -217,8 +238,9 @@ public class Display extends Frame
 				return key;		
 		    }
 		}
-		static public void preloadImages(Component target)
+		static public void preloadImages(JApplet target)
 		{
+			app = target;
 		    mt = new MediaTracker(target);
 		    
 		    for (int i = 0; i < things.length; i++)
@@ -259,13 +281,6 @@ public class Display extends Frame
     private Label msgField;
 
     private Vector<Command> cmds = new Vector<Command>();
-
-    public Display(String title)
-    {
-    	super(title);
-    	NamedImage.preloadImages(this);	
-    	configureWindow(0, 0);
-    }
     
     public synchronized void addCommand(KeyEvent ke)
     {
@@ -287,33 +302,24 @@ public class Display extends Frame
 		// Rendezvous with anyone waiting
 		notify();		
     }
-	
-    private void centerOnScreen()
-    {
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		Dimension windowSize = getSize();
-		setLocation((screenSize.width - windowSize.width) / 2, (screenSize.height - windowSize.height) / 2);
-    }
     
 
     public void configureForSize(int numRows, int numCols)
     {
 		gridCanvas.configureForSize(numRows, numCols);
-		setResizable(false);
-		pack();		
-		centerOnScreen();
+		revalidate();
     }
 
     private void configureWindow(int numRows, int numCols)
     {
-		setLayout(new BorderLayout(Margin, Margin));
+		getContentPane().setLayout(new BorderLayout(Margin, Margin));
 		setBackground(Color.lightGray);
-		gridCanvas = new GridCanvas(numRows, numCols, BlockSize);
-		add("Center", gridCanvas);
+				
 		Panel bp = new Panel();
 		bp.setFont(new Font(FontName, Font.PLAIN, FontSize));
 		
-		JEditorPane textarea = new JEditorPane("text/html", "");
+		JTextPane textarea = new JTextPane();
+		textarea.setContentType("text/html");
 		textarea.setFont(new Font(FontName, Font.PLAIN, FontSize));
 		textarea.setText("<center>Move with the <b>arrow keys</b>, and <b>U</b> for undo.<br />"
 				+ "To move to a square, where there is a clear path, just click the mouse.<br />"
@@ -327,19 +333,13 @@ public class Display extends Frame
 		//bp.add(new Label("Press <b>N</b> to skip this level, <b>Q</b> to quit, and <b>R</b> to restart this level.", Label.CENTER));
 		bp.add(msgField = new Label("New game", Label.CENTER));
 		msgField.setFont(new Font (FontName, Font.BOLD, FontSize + 2));
-		add("South", bp);
-		pack();
-		addWindowListener
-		(
-			new WindowAdapter()
-			{
-				@Override
-				public void windowClosing(WindowEvent e)
-				{
-					System.exit(0);
-				}
-			}
-		);
+		
+		JPanel panel = new JPanel();
+		gridCanvas = new GridCanvas(numRows, numCols, BlockSize);
+		panel.add(gridCanvas);
+		
+		getContentPane().add(panel, BorderLayout.CENTER);
+		getContentPane().add(bp, BorderLayout.SOUTH);
 		
 		gridCanvas.addKeyListener
 		(

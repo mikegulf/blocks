@@ -20,7 +20,7 @@ public class Blocks{
 
 	public static void main(String args[])
 	{
-		Blocks game = new Blocks(new Display("Block Test RCTA"));
+		Blocks game = new Blocks(new Display());
 		
 		
 		String thisLevel = args[0];
@@ -376,7 +376,7 @@ public class Blocks{
 	 */
 	private void readLevelFileForLevel(int level)
 	{
-		String levelDirectory = System.getProperty("user.dir") + java.io.File.separator + "Levels" + java.io.File.separator;
+		String levelDirectory = "C:\\Users\\eddie\\Documents\\blocks\\Levels\\";
 		String filename = levelDirectory + "Level" + level + ".data";
 		
 		BufferedReader in;
