@@ -4,7 +4,18 @@
  * --------------
  */
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Label;
+import java.awt.MediaTracker;
+import java.awt.Panel;
+import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -32,29 +43,19 @@ public class Display extends JApplet
 	public Display() {
 	}
 	Blocks game;
+	Thread gameThread;
 	@Override
 	public void init() {
 		
-		NamedImage.preloadImages(this);	
-    	configureWindow(0, 0);
-    	
-		game = new Blocks(this);
-		
+		NamedImage.preloadImages(this);
+
+		configureWindow(0,0);
 	}
 	
 	@Override
 	public void start() {
-		String thisLevel = "0";
-		String startLevel = "";
-		
-		for ( int i = 0; i < thisLevel.length(); i++ ) {
-			
-			if(Character.isDigit(thisLevel.charAt(i)))
-				startLevel += String.valueOf(thisLevel.charAt(i));
-		}
 		
 		long startTime = System.currentTimeMillis();
-
 		File directory = new File(Long.toString(startTime));
         if (!directory.exists()) {
             if (directory.mkdir()) {
@@ -63,14 +64,16 @@ public class Display extends JApplet
                 System.out.println(directory + " directory already exists.");
             }
         }
+        
+        game = new Blocks(this);
 
-		game.play(Integer.valueOf(startLevel), Long.toString(startTime));
-	}
-	
-	@Override
-	public void stop() {
-		getGraphics().dispose();
-		
+        
+        (new Thread() {
+        	@Override
+        	public void run() {
+        		game.play(0, Long.toString(startTime));
+        	}
+        }).start();
 	}
 	
 	//inner class GridCanvas
@@ -79,7 +82,6 @@ public class Display extends JApplet
     	static final long serialVersionUID = 1;
     	
 		private int numRows, numCols, blockSize;
-		private NamedImage blank;
 		private List<BlockImage> images = new CopyOnWriteArrayList<>();
 		
 		private class BlockImage {
@@ -98,13 +100,11 @@ public class Display extends JApplet
 			}
 		}
 		
-		public GridCanvas(int nRows, int nCols, int size)
+		public GridCanvas(int size)
 		{	
 		    setBackground(Color.white);
 		    setFont(new Font("SansSerif", Font.PLAIN, 8));
 		    blockSize = size;
-		    configureForSize(nRows, nCols);
-		    blank = NamedImage.findImageNamed("Empty");
 		}
 		
 		/**
@@ -271,6 +271,8 @@ public class Display extends JApplet
 		    return ((o instanceof NamedImage) && name.equals(((NamedImage)o).name));
 		}
     }
+    
+    
     static final long serialVersionUID = 1;
     private static final int Margin = 10;
     private static final int FontSize = 10; 
@@ -315,16 +317,16 @@ public class Display extends JApplet
 		getContentPane().setLayout(new BorderLayout(Margin, Margin));
 		setBackground(Color.lightGray);
 				
-		Panel bp = new Panel();
-		bp.setFont(new Font(FontName, Font.PLAIN, FontSize));
-		
 		JTextPane textarea = new JTextPane();
+		textarea.setEditable(false);
 		textarea.setContentType("text/html");
 		textarea.setFont(new Font(FontName, Font.PLAIN, FontSize));
 		textarea.setText("<center>Move with the <b>arrow keys</b>, and <b>U</b> for undo.<br />"
 				+ "To move to a square, where there is a clear path, just click the mouse.<br />"
 				+ "Press <b>N</b> to skip this level, <b>Q</b> to quit, and <b>R</b> to restart this level.</center>");
 		
+		Panel bp = new Panel();
+		bp.setFont(new Font(FontName, Font.PLAIN, FontSize));
 		// numRows, numCols, hGap, vGap
 		bp.setLayout(new GridLayout(2, 1, 10, 0)); 
 		//bp.add(new Label("Move with the <b>arrow keys</b>, and <b>U</b> for undo.", Label.CENTER));
@@ -335,7 +337,7 @@ public class Display extends JApplet
 		msgField.setFont(new Font (FontName, Font.BOLD, FontSize + 2));
 		
 		JPanel panel = new JPanel();
-		gridCanvas = new GridCanvas(numRows, numCols, BlockSize);
+		gridCanvas = new GridCanvas(BlockSize);
 		panel.add(gridCanvas);
 		
 		getContentPane().add(panel, BorderLayout.CENTER);

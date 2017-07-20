@@ -5,8 +5,19 @@
  * This is the top level game class.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Vector;
+
+import javax.swing.JOptionPane;
 
 public class Blocks{
 	private static int numLevels = 50;
@@ -18,41 +29,6 @@ public class Blocks{
 	 */
 	public static final int maximumAllowedUndos = 100;
 
-	public static void main(String args[])
-	{
-		Blocks game = new Blocks(new Display());
-		
-		
-		String thisLevel = args[0];
-		String startLevel = "";
-		
-		for ( int i = 0; i < thisLevel.length(); i++ ) {
-			
-			if(Character.isDigit(thisLevel.charAt(i)))
-				startLevel += String.valueOf(thisLevel.charAt(i));
-		}
-		
-		long startTime = System.currentTimeMillis();
-
-		File directory = new File(Long.toString(startTime));
-        if (!directory.exists()) {
-            if (directory.mkdir()) {
-                System.out.println(directory + " directory was created.");
-            } else {
-                System.out.println(directory + " directory already exists.");
-            }
-        }
-
-		if(args[1].equals("true")){
-			int thisSpeed = Integer.valueOf(args[2]);
-			String dir = args[3];
-			game.openFileForRead(dir + "/" + args[0] + ".txt");	
-			game.watchRun(startLevel, thisSpeed);
-		}else{
-			game.play(Integer.valueOf(startLevel), Long.toString(startTime));
-		}
-		
-	}
 
 	private Search search;
 	private Vector<Move> undoMoveHistory = new Vector<Move>();
@@ -70,6 +46,8 @@ public class Blocks{
 	private int level = 0;
 	private int replayNum = 0;
 	private boolean replayLevel = false;
+	
+	private boolean gameQuit = false;
 	
 	private Grid squares;
 	public static Tracking track;
@@ -165,7 +143,7 @@ public class Blocks{
 		    	return moveList;
 		    }
 		}catch (IOException ioe){
-			System.out.print(ioe);
+			errorMessage("Exception: " + ioe);
 		}
 		
 		return null;
@@ -200,7 +178,7 @@ public class Blocks{
             //openFileWriteBlocks("test");
             
         } catch (IOException ioe) {
-        	System.out.println( "Exception: " + ioe); 
+        	errorMessage( "Exception: " + ioe); 
         } finally {
             if(out != null){
             	out.close();
@@ -236,7 +214,7 @@ public class Blocks{
 			
 
         } catch (IOException ioe) {
-        	System.out.println( "Exception: " + ioe); 
+        	errorMessage( "Exception: " + ioe); 
         } finally {
             if(out != null){
             	out.close();
@@ -271,9 +249,13 @@ public class Blocks{
 			levelOver = false;
 			vacantSlots = 0;
 			readLevelFileForLevel(level);
-			while (!levelOver) {
+			while (!levelOver && !gameQuit) {
 				processSingleCommand(display.getCommandFromUser());
 			}
+			
+			if(gameQuit)
+				break;
+			
 			if(!replayLevel){
 				int writelevel = level - 1;
 				openFileForWrite(dir + "/" + writelevel + ".txt");
@@ -287,8 +269,6 @@ public class Blocks{
 				replayLevel = false;
 			}
 		}
-
-		quit();
 	}
 	/**
 	 * Reruns a level based on the moves from a file written from a user.
@@ -315,8 +295,6 @@ public class Blocks{
 			}
 			levelOver = true;
 		}
-
-		quit();
 	}
 
 	/**
@@ -328,8 +306,9 @@ public class Blocks{
 		switch (cmd.getType())
 		{
 			case Command.Quit:
-				//need to output any moves so for when quitting
-				quit();
+				if(JOptionPane.showConfirmDialog(display, "Are you sure you want to quit?", "Confirm Quit", JOptionPane.YES_NO_OPTION)
+						== JOptionPane.YES_OPTION)
+					quit();
 				return;
 			case Command.Next:
 				levelOver = true;
@@ -364,9 +343,8 @@ public class Blocks{
 
 	public void quit()
 	{
-		System.exit(1);
+		gameQuit = true;
 	}
-
 	/**
 	 * Reads the configuration file. The files are assumed to be stored in a
 	 * subdirectory "Levels" of the current directory. The level filenames should
@@ -376,18 +354,15 @@ public class Blocks{
 	 */
 	private void readLevelFileForLevel(int level)
 	{
-		String levelDirectory = "C:\\Users\\eddie\\Documents\\blocks\\Levels\\";
-		String filename = levelDirectory + "Level" + level + ".data";
-		
 		BufferedReader in;
 		try
 		{
-			in = new BufferedReader(new FileReader(filename));
+			InputStream is = new URL(display.getCodeBase() + "Levels/level" + level + ".data").openStream();
+			in = new BufferedReader(new InputStreamReader(is));
 		}
-		catch (FileNotFoundException e)
+		catch (Exception e)
 		{
-			System.out.println("Cannot find file \"" + filename + "\".");
-			quit();
+			errorMessage("Cannot open file \"Levels/Level" + level + ".data\".");
 			return;
 		}
 
@@ -537,7 +512,7 @@ public class Blocks{
 		}
 
 		if (square == null) {
-			System.out.println("problem interpreting character " + ch);
+			errorMessage("problem interpreting character " + ch);
 			return;
 		}
 
@@ -553,5 +528,9 @@ public class Blocks{
 	public Square squareAt(Location location) {
 		return (squares.inBounds(location) ? ((Square) squares
 				.elementAt(location)) : null);
+	}
+	
+	private void errorMessage(String message) {
+		JOptionPane.showMessageDialog(display, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 }
