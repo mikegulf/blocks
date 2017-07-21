@@ -67,11 +67,12 @@ public class Display extends JApplet
         
         game = new Blocks(this);
 
-        
         (new Thread() {
         	@Override
         	public void run() {
-        		game.play(0, Long.toString(startTime));
+        		game.play(9, directory.getPath());
+        		game.play(9, directory.getPath(), Blocks.GameType.UNLABELED_GAME);
+        		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
         	}
         }).start();
 	}
@@ -85,6 +86,34 @@ public class Display extends JApplet
 		private List<BlockImage> images = new CopyOnWriteArrayList<>();
 		
 		private class BlockImage {
+			@Override
+			public int hashCode() {
+				final int prime = 31;
+				int result = 1;
+				result = prime * result + getOuterType().hashCode();
+				result = prime * result + ((r == null) ? 0 : r.hashCode());
+				return result;
+			}
+
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (obj == null)
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				BlockImage other = (BlockImage) obj;
+				if (!getOuterType().equals(other.getOuterType()))
+					return false;
+				if (r == null) {
+					if (other.r != null)
+						return false;
+				} else if (!r.equals(other.r))
+					return false;
+				return true;
+			}
+
 			public Image img;
 			public char ch;
 			public Rectangle r;
@@ -97,6 +126,10 @@ public class Display extends JApplet
 			
 			public boolean hasChar() {
 				return ch > 0;
+			}
+
+			private GridCanvas getOuterType() {
+				return GridCanvas.this;
 			}
 		}
 		
@@ -375,10 +408,6 @@ public class Display extends JApplet
     
     public void drawAtLocation(String name, char ch, Location loc)
     {
-    	if(name.equals("Box")){
-    		Blocks.track.setElementAt(loc, Character.getNumericValue(ch));
-    		System.out.print(loc.toString());
-    	}
     	gridCanvas.drawImageAndLetterAtLocation(name, ch, loc);
     }
     

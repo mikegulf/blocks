@@ -1,11 +1,14 @@
 
 public class Cement extends Square {
 	
+	private String imgName;
+	private boolean hidden;
 	
-	public Cement(Location loc, Blocks g, char ch) {
+	Cement(Location loc, Blocks g, char ch) {
+		
 		super(loc, g, ch);
-		isHidden = true;
 		imgName = "Box";
+		hidden = true;
 	}
 	
 	public String getImageName() {
@@ -16,10 +19,17 @@ public class Cement extends Square {
 		imgName = name;
 	}
 	
-	
 	public boolean canEnter() {
-		return false;
+		return canPush(0);
 	}
 	
+	public boolean canPush(int dir) {
+		if(hidden) {
+			setImageName("Cement");
+			hidden = false;
+			drawSelf();
+		}
+		return false;
+	}
 	
 }

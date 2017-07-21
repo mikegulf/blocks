@@ -9,7 +9,6 @@ class Square
 	protected Location location;
 	protected Blocks game;
 	protected Thing contents;
-	protected boolean isHidden;
 	protected String imgName;
 	protected char pch;
 
@@ -17,7 +16,6 @@ class Square
 	{
 		location = loc;
 		game = g;
-		isHidden = false;
 		imgName = "";
 		pch = ch;
 	}
@@ -102,8 +100,16 @@ class Square
 	public Location getLocation() {
 		return location;
 	}
+	
+	public void setLocation(Location loc) {
+		location = loc;
+	}
 
 	public boolean pushContents(int direction) {
+		
+		if(contents != null)
+			contents.unHide();
+		
 		if (!canPush(direction)) {
 			return false;
 		}
@@ -121,15 +127,5 @@ class Square
 	
 	public void setImageName(String name){
 		imgName = name;
-	}
-	
-	public boolean checkHidden(){
-		if(isHidden){	
-			setImageName("Cement");
-			drawSelf();
-			return isHidden = false;
-		}
-		else
-			return isHidden;
 	}
 }

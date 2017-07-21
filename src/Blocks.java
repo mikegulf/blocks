@@ -20,7 +20,6 @@ import java.util.Vector;
 import javax.swing.JOptionPane;
 
 public class Blocks{
-	private static int numLevels = 50;
 	public static final boolean VERBOSE = false;
 	private final static String alphabet="abcdefghijklmnopqrstuvwxyz";
 	
@@ -50,7 +49,13 @@ public class Blocks{
 	private boolean gameQuit = false;
 	
 	private Grid squares;
-	public static Tracking track;
+	public Tracking track;
+	
+	public enum GameType {
+		REGULAR_GAME,
+		UNLABELED_GAME,
+		IMMOVABLE_GAME
+	};
 
 	public Blocks(Display display)
 	{
@@ -155,6 +160,10 @@ public class Blocks{
 	 */
 	public void openFileForWrite(String filename){
 		
+		//TODO save coordinates instead
+		
+		System.out.print(filename);
+		
 		PrintWriter out = null;
         try {
             out = new PrintWriter(filename);
@@ -189,6 +198,10 @@ public class Blocks{
     }
 	
 	public void openFileWriteBlocks(String filename){
+		
+		//TODO output as csv instead
+		//TODO add timestamps, box count, level, etc to block file
+		//TODO possible column of boolean "touched"
 		
 		Object[][] obj = track.getGrid();
 		
@@ -236,19 +249,19 @@ public class Blocks{
 	}
 
 	/**
-	 * Runs the application to completion. Starts at level defined in the first 
-	 * command line argument, reads in the level file, activates the level, waits 
-	 * for level to end, writes all the moves out to a file, and then stops the level. 
-	 * It then advances to next level.
-	 * 
-	 * @param chosenLvel - level that is input from command line
+	 * Runs one "Round" of the game starting at chosenLevel
+	 * @param numLevels - number of levels to play
+	 * @param dir - pathname of directory to save game data in
+	 * @param gameType - determines which "round" to play, defaults to regular
 	 */
-	public void play(int chosenLevel, String dir) {
-		level = chosenLevel;
+	public void play(int numLevels, String dir, GameType gt) {
+		level = 0;
+		
 		while (level < numLevels) {
+			
 			levelOver = false;
 			vacantSlots = 0;
-			readLevelFileForLevel(level);
+			readLevelFileForLevel(level, gt);
 			while (!levelOver && !gameQuit) {
 				processSingleCommand(display.getCommandFromUser());
 			}
@@ -270,6 +283,10 @@ public class Blocks{
 			}
 		}
 	}
+	
+	public void play(int chosenLevel, String dir) {
+		play(chosenLevel, dir, GameType.REGULAR_GAME);
+	}
 	/**
 	 * Reruns a level based on the moves from a file written from a user.
 	 * @param level - starting level
@@ -277,9 +294,10 @@ public class Blocks{
 	 */
 	public void watchRun(String level, int speed) {
 
+		//TODO add "slug" trail to replay
 		levelOver = false;
 		vacantSlots = 0;
-		readLevelFileForLevel(Integer.valueOf(level));
+		readLevelFileForLevel(Integer.valueOf(level), GameType.REGULAR_GAME);
 		while (!levelOver) {
 			for(int i = 0; i < moveList.size(); i++){
 				//processSingleCommand(display.getCommandFromUser());
@@ -352,7 +370,7 @@ public class Blocks{
 	 * file identify how many rows and columns are in the particular level. The
 	 * grid and display are reconfigured to match that.
 	 */
-	private void readLevelFileForLevel(int level)
+	private void readLevelFileForLevel(int level, GameType gt)
 	{
 		BufferedReader in;
 		try
@@ -389,6 +407,41 @@ public class Blocks{
 
 				// Skip over newline at end of row
 				in.readLine();
+			}
+			
+			for (int row = numRows - 1; row > 0; row--) {
+				for ( int col = numCols - 1; col > 0; col--) {
+					
+					Square sq = squareAt(new Location(row, col));
+					
+					switch (gt) {
+					case UNLABELED_GAME:
+						if(sq.getContents() instanceof Box) {
+							sq.getContents().setHidden(true);
+						}
+						
+						if(col < numCols / 2) {
+							swapSquares(sq, squareAt(new Location(row, numCols - col - 1)));
+						}
+					case REGULAR_GAME:
+						if(sq instanceof Cement) {
+							sq = new Square(sq.getLocation(), this, '\0');
+							squares.setElementAt(sq.getLocation(), sq);
+							sq.drawSelf();
+						}
+						break;
+					case IMMOVABLE_GAME:
+						if(sq.getContents() instanceof Box) {
+							sq.getContents().setHidden(true);
+							sq.drawSelf();
+						}
+						
+						if(col < row) {
+							swapSquares(sq, squareAt(new Location(col, row)));
+						}
+						break;
+					}
+				}
 			}
 			display.drawStatusMessage("Loaded level " + level + "...");
 			display.setVisible(true);
@@ -429,36 +482,6 @@ public class Blocks{
 			square = new Square(location, this, '\0');
 			square.addContents(new Box(square, this, '\0'));
 			break;
-		case 'a':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '0'));
-			track.setElementAt(location, 0);
-			break;
-		case 'b':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '1'));
-			track.setElementAt(location, 1);
-			break;
-		case 'c':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '2'));
-			track.setElementAt(location, 2);
-			break;
-		case 'd':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '3'));
-			track.setElementAt(location, 3);
-			break;
-		case 'e':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '4'));
-			track.setElementAt(location, 4);
-			break;
-		case 'f':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '5'));
-			track.setElementAt(location, 5);
-			break;
 		// Goals
 		case '*': //goal with box already on it
 			square = new Goal(location, this, '\0');
@@ -467,34 +490,6 @@ public class Blocks{
 			break;
 		case '.': // default goal without number
 			square = new Goal(location, this, '\0');
-			incrementSlots();
-			break;
-		case '0':
-			square = new Goal(location, this, '0');
-			incrementSlots();
-			break;
-		case '1':
-			square = new Goal(location, this, '1');
-			incrementSlots();
-			break;
-		case '2':
-			square = new Goal(location, this, '2');
-			incrementSlots();
-			break;
-		case '3':
-			square = new Goal(location, this, '3');
-			incrementSlots();
-			break;
-		case '4':
-			square = new Goal(location, this, '4');
-			incrementSlots();
-			break;
-		case '5':
-			square = new Goal(location, this, '5');
-			incrementSlots();
-			break;
-		case '6':
-			square = new Goal(location, this, '6');
 			incrementSlots();
 			break;
 		case '^':
@@ -509,6 +504,16 @@ public class Blocks{
 		case '!':
 			square = new Space(location, this, '\0');
 			break;
+		}
+		
+		if('0' <= ch && ch <= '9') {
+			square = new Goal(location, this, ch);
+			incrementSlots();
+		}
+		else if('a' <= ch && ch <= 'j') {
+			square = new Square(location, this, '\0');
+			square.addContents(new Box(square, this, (char)(ch - 'a' + '0')));
+			track.setElementAt(location, ch - 'a');
 		}
 
 		if (square == null) {
@@ -528,6 +533,19 @@ public class Blocks{
 	public Square squareAt(Location location) {
 		return (squares.inBounds(location) ? ((Square) squares
 				.elementAt(location)) : null);
+	}
+	
+	private void swapSquares(Square sq1, Square sq2) {
+		Location swapLoc = sq1.getLocation();
+		
+		squares.setElementAt(sq1.getLocation(), sq2);
+		squares.setElementAt(sq2.getLocation(), sq1);
+		
+		sq1.setLocation(sq2.getLocation());
+		sq2.setLocation(swapLoc);
+		
+		sq1.drawSelf();
+		sq2.drawSelf();
 	}
 	
 	private void errorMessage(String message) {
