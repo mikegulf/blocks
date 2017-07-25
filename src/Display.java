@@ -15,6 +15,7 @@ import java.awt.Image;
 import java.awt.Label;
 import java.awt.MediaTracker;
 import java.awt.Panel;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -43,7 +44,7 @@ public class Display extends JApplet
 	public Display() {
 	}
 	Blocks game;
-	Thread gameThread;
+	
 	@Override
 	public void init() {
 		
@@ -77,6 +78,22 @@ public class Display extends JApplet
         }).start();
 	}
 	
+	@Override
+	public void stop() {
+		
+		getContentPane().removeAll();
+		
+		JTextPane textarea = new JTextPane();
+		textarea.setEditable(false);
+		textarea.setContentType("text/html");
+		textarea.setFont(new Font(FontName, Font.PLAIN, FontSize * 10));
+		textarea.setText("<center><h1>Thanks for playing!</h1></center>");
+		
+		getContentPane().add(textarea, BorderLayout.CENTER);
+		
+		revalidate();
+	}
+	
 	//inner class GridCanvas
     public class GridCanvas extends JPanel
     {
@@ -84,6 +101,7 @@ public class Display extends JApplet
     	
 		private int numRows, numCols, blockSize;
 		private List<BlockImage> images = new CopyOnWriteArrayList<>();
+		private List<Point> trail;
 		
 		private class BlockImage {
 			@Override
@@ -172,6 +190,16 @@ public class Display extends JApplet
 		    g.drawString(s, r.x + (r.width - fm.stringWidth(s)) / 2, r.y + (r.height + fm.getHeight()) / 2);
 		}
 		
+		public void addToTrail(Location loc) {
+			if(trail == null) 
+				trail = new CopyOnWriteArrayList<>();
+			
+			Rectangle r = rectForLocation(loc.getRow(), loc.getCol());
+			
+			trail.add(new Point(r.x + (r.width / 2), r.y + (r.height / 2)));
+			repaint();
+		}
+		
 		public void drawImageAndLetterAtLocation(String imageFileName, char ch, Location loc)
 		{
 			// Make sure location is valid
@@ -210,11 +238,19 @@ public class Display extends JApplet
 		    	if(bi.hasChar())
 		    		drawCenteredString(g, bi.ch + "", bi.r);
 		    }
+		    if(trail != null && trail.size() > 1) {
+		    	Point p1 = trail.get(0);
+		    	g.setColor(Color.GREEN);
+		    	for(Point p2: trail) {
+		    		g.drawLine(p1.x, p1.y, p2.x, p2.y);
+		    		p1 = p2;
+		    	}
+		    }
 		}
 		
 		private Rectangle rectForLocation(int row, int col)
 		{
-		    return new Rectangle(col * blockSize, row * blockSize, blockSize, blockSize);
+		    return new Rectangle(col * blockSize, (numRows - row - 1) * blockSize, blockSize, blockSize);
 		}
 	
 		@Override
@@ -449,6 +485,10 @@ public class Display extends JApplet
     	gridCanvas.requestFocus();
     	return gridCanvas.hasFocus();
     }
+
+	public void addToTrail(Location location) {
+		gridCanvas.addToTrail(location);
+	}
 }
 
 

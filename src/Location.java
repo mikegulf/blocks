@@ -63,21 +63,21 @@ public class Location {
 	public Location adjacentLocation(int whichDir) {
 		switch (whichDir) {
 		case North:
-			return new Location(row - 1, col);
-		case South:
 			return new Location(row + 1, col);
+		case South:
+			return new Location(row - 1, col);
 		case East:
 			return new Location(row, col + 1);
 		case West:
 			return new Location(row, col - 1);
 		case Northeast:
-			return new Location(row - 1, col + 1);
-		case Northwest:
-			return new Location(row - 1, col - 1);
-		case Southeast:
 			return new Location(row + 1, col + 1);
-		case Southwest:
+		case Northwest:
 			return new Location(row + 1, col - 1);
+		case Southeast:
+			return new Location(row - 1, col + 1);
+		case Southwest:
+			return new Location(row - 1, col - 1);
 		default:
 			throw new IndexOutOfBoundsException();
 		}
@@ -105,6 +105,6 @@ public class Location {
 	 * may be handy for debugging purposes.
 	 */
 	public String toString() {
-		return "[" + row + ", " + col + "]";
+		return col + "," + row;
 	}
 }
