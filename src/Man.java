@@ -26,15 +26,13 @@ class Man extends Thing {
 			if (!m.getIsUndo()) 
 				undo.setPushed(newSquare.getContents());
 			
-			if (newSquare.pushContents(direction))
-			{
+
+			if (newSquare.pushContents(direction)) {
 				if (!m.getIsUndo()) {
 					game.addMove(undo);
 					
 				}
 				return newSquare.addContents(this);
-			}else if(newSquare.checkHidden()){
-				System.out.println("Hidden");
 			}
 			
 			

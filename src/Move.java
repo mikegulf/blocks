@@ -69,6 +69,6 @@ public class Move {
 	@Override
 	public String toString() {
 		//return "[Move: " + direction + "]";
-		return direction + ",";
+		return "" + direction;
 	}
 }

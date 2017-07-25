@@ -9,7 +9,6 @@ class Square
 	protected Location location;
 	protected Blocks game;
 	protected Thing contents;
-	protected boolean isHidden;
 	protected String imgName;
 	protected char pch;
 
@@ -17,7 +16,6 @@ class Square
 	{
 		location = loc;
 		game = g;
-		isHidden = false;
 		imgName = "";
 		pch = ch;
 	}
@@ -27,6 +25,8 @@ class Square
 		if (canEnter())
 		{
 			boolean wasGoal = (c.getSquare() instanceof Goal);
+			
+			char pastPch = c.getSquare().pch;
 
 			c.getSquare().removeContents();
 
@@ -46,7 +46,7 @@ class Square
 				System.out.println("They match");
 				game.decrementSlots();
 			}
-			else if (!(this instanceof Goal) && c instanceof Box && wasGoal && c.pch == this.pch)
+			else if (!(this instanceof Goal) && c instanceof Box && wasGoal && c.pch == pastPch)
 			{
 				game.incrementSlots();
 			}
@@ -100,8 +100,16 @@ class Square
 	public Location getLocation() {
 		return location;
 	}
+	
+	public void setLocation(Location loc) {
+		location = loc;
+	}
 
 	public boolean pushContents(int direction) {
+		
+		if(contents != null)
+			contents.unHide();
+		
 		if (!canPush(direction)) {
 			return false;
 		}
@@ -119,15 +127,5 @@ class Square
 	
 	public void setImageName(String name){
 		imgName = name;
-	}
-	
-	public boolean checkHidden(){
-		if(isHidden){	
-			setImageName("Cement");
-			drawSelf();
-			return isHidden = false;
-		}
-		else
-			return isHidden;
 	}
 }

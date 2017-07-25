@@ -5,11 +5,20 @@
  * This is the top level game class.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
+import javax.swing.JOptionPane;
 
 public class Blocks{
-	private static int numLevels = 50;
 	public static final boolean VERBOSE = false;
 	private final static String alphabet="abcdefghijklmnopqrstuvwxyz";
 	
@@ -18,41 +27,6 @@ public class Blocks{
 	 */
 	public static final int maximumAllowedUndos = 100;
 
-	public static void main(String args[])
-	{
-		Blocks game = new Blocks(new Display("Block Test RCTA"));
-		
-		
-		String thisLevel = args[0];
-		String startLevel = "";
-		
-		for ( int i = 0; i < thisLevel.length(); i++ ) {
-			
-			if(Character.isDigit(thisLevel.charAt(i)))
-				startLevel += String.valueOf(thisLevel.charAt(i));
-		}
-		
-		long startTime = System.currentTimeMillis();
-
-		File directory = new File(Long.toString(startTime));
-        if (!directory.exists()) {
-            if (directory.mkdir()) {
-                System.out.println(directory + " directory was created.");
-            } else {
-                System.out.println(directory + " directory already exists.");
-            }
-        }
-
-		if(args[1].equals("true")){
-			int thisSpeed = Integer.valueOf(args[2]);
-			String dir = args[3];
-			game.openFileForRead(dir + "/" + args[0] + ".txt");	
-			game.watchRun(startLevel, thisSpeed);
-		}else{
-			game.play(Integer.valueOf(startLevel), Long.toString(startTime));
-		}
-		
-	}
 
 	private Search search;
 	private Vector<Move> undoMoveHistory = new Vector<Move>();
@@ -71,8 +45,16 @@ public class Blocks{
 	private int replayNum = 0;
 	private boolean replayLevel = false;
 	
+	private boolean gameQuit = false;
+	
 	private Grid squares;
-	public static Tracking track;
+	public Tracking track;
+	
+	public enum GameType {
+		REGULAR_GAME,
+		UNLABELED_GAME,
+		IMMOVABLE_GAME
+	};
 
 	public Blocks(Display display)
 	{
@@ -144,63 +126,70 @@ public class Blocks{
 	/**
 	 * Open file and parse each move.
 	 * @param file - file to read from
-	 * @return List of moves from the file
+	 * @return GameType of the file
 	 */
-	public List<String> openFileForRead(String file){
+	public GameType openFileForRead(String file){
+		
+		GameType gt = GameType.REGULAR_GAME;
+		
+		moveList = new ArrayList<String>();
 		
 		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 		    String line;
+		    line = br.readLine();
+		    level = Integer.valueOf(line.split(",")[0]);
+		    gt = GameType.valueOf(line.split(",")[1]);
+		    
+		    br.readLine();
+		    
 		    while ((line = br.readLine()) != null) {
-		       // process the line.
-		    	moveList= Arrays.asList(line.split(","));
-		    	
-		    	if (Blocks.VERBOSE)
-		    	{
-		    		//print out the moves from the file
-		    		for(int i=0;i < moveList.size();i++){
-		    			System.out.print(moveList.get(i) +",");
-		    		}
-		    		System.out.println();
-		    	}
-		    	return moveList;
+		    	if(line.split(",").length > 2)
+		    		moveList.add(line.split(",")[2]);		    	
 		    }
+		    
 		}catch (IOException ioe){
-			System.out.print(ioe);
+			errorMessage("Exception: " + ioe);
 		}
 		
-		return null;
+		return gt;
     }
 	
 	/**
 	 * Write all the moves from the completed level
-	 * @param filename - file to write to
+	 * @param dir - directory in which to save file
+	 * @param level - level number to save
+	 * @param gt - enum of type of game played
 	 */
-	public void openFileForWrite(String filename){
+	public void openFileForWrite(String dir, int level, GameType gt){
 		
 		PrintWriter out = null;
+		String filename;
+		
+		if(replayLevel) {
+			filename = dir + "\\" + level + alphabet.charAt(replayNum - 1) + ".txt";
+		}
+		else {
+			filename = dir + "\\" + level + ".txt";
+		}
+		
         try {
             out = new PrintWriter(filename);
+            			
+            out.write(level + "," + gt.toString() + System.lineSeparator());
+            out.write("X,Y,direction,timestamp" + System.lineSeparator());
             
-            Iterator<Move> it = undoMoveHistory.iterator();
-			
-            while(it.hasNext()) {
-            	Move element = new Move(Location.reverseDirection(it.next().getDirection()), true);
-
-            	//print the move to the screen
-            	if (Blocks.VERBOSE)
-            	{
-            		System.out.print(element);
-            	}
-            	//print to file
-            	out.write(element.toString());
-            }
+            Location loc = track.getStartingLocation();
             
-            //out.write(Arrays.deepToString(track.getGrid()));
-
-            //openFileWriteBlocks("test");
+            Object[] moves = track.getMoves();
+            
+            for(int i = 0; i < track.getCurrentMove(); ++i) {
+            	out.write(loc + "," + ((Move)moves[i]).getDirection() + "," + track.getTimeStamp(i) + System.lineSeparator());
+            	loc = loc.adjacentLocation(((Move)moves[i]).getDirection());
+        	}
+            out.write(loc + "," + System.lineSeparator());
             
         } catch (IOException ioe) {
-        	System.out.println( "Exception: " + ioe); 
+        	errorMessage( "Exception: " + ioe); 
         } finally {
             if(out != null){
             	out.close();
@@ -210,33 +199,50 @@ public class Blocks{
         }
     }
 	
-	public void openFileWriteBlocks(String filename){
+	public void openFileWriteBlocks(String dir, int level){
 		
-		Object[][] obj = track.getGrid();
+		//TODO add timestamps, box count, level, etc to block file
+		String filename;
+		
+		if(replayLevel) {
+			filename = dir + "\\blocks" + level + alphabet.charAt(replayNum - 1) + ".txt";
+		}
+		else {
+			filename = dir + "\\blocks" + level + ".txt";
+		}
+		
+		Location[][] obj = track.getGrid();
 		
 		PrintWriter out = null;
         try {
             out = new PrintWriter(filename);
             
-            for (int row = 0; row <= track.getCurrentMove(); row++)
+            for(int i = 0; i < track.getNumBoxes(); ++i) {
+            	out.write("box" + i + "x,box" + i + "y,box" + i + "moved,");
+            }
+            out.write("timestamp," + System.lineSeparator());
+            
+            Location[] lastMove = obj[0];
+            
+            for (int move = 0; move <= track.getCurrentMove(); move++)
 			{
-            	out.write("[");
-				for (int col = 0; col < track.getNumBoxes(); col++)
-				{
-					out.write(obj[row][col].toString());
-					if(col + 1 < track.getNumBoxes())
-						out.write(",");
+            	for (int box = 0; box < track.getNumBoxes(); box++)
+            	{
+					out.write(obj[move][box].toString() + ",");
+					out.write((obj[move][box] == lastMove[box]) ? "0," : "1,");
 				}
-
-				// Skip over newline at end of row
-				out.write("]\n");
+            	if(move == track.getCurrentMove())
+            		out.write(System.lineSeparator());
+            	else
+            		out.write(track.getTimeStamp(move) + "," + System.lineSeparator());
+				lastMove = obj[move];
 			}
 
             //System.out.println(Arrays.deepToString(track.getGrid()));
 			
 
         } catch (IOException ioe) {
-        	System.out.println( "Exception: " + ioe); 
+        	errorMessage( "Exception: " + ioe); 
         } finally {
             if(out != null){
             	out.close();
@@ -258,65 +264,74 @@ public class Blocks{
 	}
 
 	/**
-	 * Runs the application to completion. Starts at level defined in the first 
-	 * command line argument, reads in the level file, activates the level, waits 
-	 * for level to end, writes all the moves out to a file, and then stops the level. 
-	 * It then advances to next level.
-	 * 
-	 * @param chosenLvel - level that is input from command line
+	 * Runs one "Round" of the game starting at chosenLevel
+	 * @param numLevels - number of levels to play
+	 * @param dir - pathname of directory to save game data in
+	 * @param gameType - determines which "round" to play, defaults to regular
 	 */
-	public void play(int chosenLevel, String dir) {
-		level = chosenLevel;
-		while (level < numLevels) {
+	public void play(int numLevels, String dir, GameType gt) {
+		level = 0;
+		
+		while (level < numLevels && !gameQuit) {
+			
 			levelOver = false;
 			vacantSlots = 0;
-			readLevelFileForLevel(level);
-			while (!levelOver) {
+			readLevelFileForLevel(level, gt);
+			while (!levelOver && !gameQuit) {
 				processSingleCommand(display.getCommandFromUser());
 			}
+			
 			if(!replayLevel){
 				int writelevel = level - 1;
-				openFileForWrite(dir + "/" + writelevel + ".txt");
-				openFileWriteBlocks(dir + "/" + writelevel + "blocks.txt");
+				openFileForWrite(dir, writelevel, gt);
+				openFileWriteBlocks(dir, writelevel);
 				replayNum = 0;
 			}else {
 				int currentLevel = level;
-				char replayChar = alphabet.charAt(replayNum - 1);
-				openFileForWrite(dir + "/" + currentLevel + "" + replayChar + ".txt");
-				openFileWriteBlocks(dir + "/" + currentLevel + "" + replayChar + "blocks.txt");
+				openFileForWrite(dir, currentLevel, gt);
+				openFileWriteBlocks(dir, currentLevel);
 				replayLevel = false;
 			}
 		}
-
-		quit();
+	}
+	
+	public void play(int chosenLevel, String dir) {
+		play(chosenLevel, dir, GameType.REGULAR_GAME);
 	}
 	/**
 	 * Reruns a level based on the moves from a file written from a user.
-	 * @param level - starting level
-	 * @param speed - speed between moves in milliseconds
+	 * @param levelFile - filename of the level to view
 	 */
-	public void watchRun(String level, int speed) {
+	public void watchRun(String levelFile) {
 
 		levelOver = false;
 		vacantSlots = 0;
-		readLevelFileForLevel(Integer.valueOf(level));
+		
+		GameType gt = openFileForRead(levelFile);
+		readLevelFileForLevel(level, gt);
+		
 		while (!levelOver) {
+			
+			display.addToTrail(man.getSquare().getLocation());
+						
 			for(int i = 0; i < moveList.size(); i++){
 				//processSingleCommand(display.getCommandFromUser());
+				
 				man.move(new Move(Integer.valueOf(moveList.get(i)), false));
+				
+				display.addToTrail(man.getSquare().getLocation());
+
 				try
 				{
-					Thread.sleep(speed);
+					Thread.sleep(250);
 				}
 				catch (InterruptedException ie)
 				{
-					ie.printStackTrace();
+					errorMessage("Exception: " + ie);
 				}
 			}
 			levelOver = true;
 		}
-
-		quit();
 	}
 
 	/**
@@ -328,8 +343,11 @@ public class Blocks{
 		switch (cmd.getType())
 		{
 			case Command.Quit:
-				//need to output any moves so for when quitting
-				quit();
+				if(JOptionPane.showConfirmDialog(display, "Are you sure you want to quit?", "Confirm Quit", JOptionPane.YES_NO_OPTION)
+						== JOptionPane.YES_OPTION) {
+					quit();
+					display.stop();
+				}
 				return;
 			case Command.Next:
 				levelOver = true;
@@ -348,9 +366,10 @@ public class Blocks{
 				}
 				break;
 			case Command.Directional:
-				track.setNextMove();
-				track.copyLocationsNextMove();
+				
+				track.setNextMove(cmd.getMove());
 				man.move(cmd.getMove());
+				track.copyLocationsNextMove();
 				break;
 			case Command.Undo:
 				undoLastMove();
@@ -361,12 +380,11 @@ public class Blocks{
 				break;
 		}
 	}
-
-	public void quit()
-	{
-		System.exit(1);
+	
+	public void quit() {
+		gameQuit = true;
 	}
-
+	
 	/**
 	 * Reads the configuration file. The files are assumed to be stored in a
 	 * subdirectory "Levels" of the current directory. The level filenames should
@@ -374,20 +392,17 @@ public class Blocks{
 	 * file identify how many rows and columns are in the particular level. The
 	 * grid and display are reconfigured to match that.
 	 */
-	private void readLevelFileForLevel(int level)
+	private void readLevelFileForLevel(int level, GameType gt)
 	{
-		String levelDirectory = System.getProperty("user.dir") + java.io.File.separator + "Levels" + java.io.File.separator;
-		String filename = levelDirectory + "Level" + level + ".data";
-		
 		BufferedReader in;
 		try
 		{
-			in = new BufferedReader(new FileReader(filename));
+			InputStream is = new URL(display.getCodeBase() + "Levels/level" + level + ".data").openStream();
+			in = new BufferedReader(new InputStreamReader(is));
 		}
-		catch (FileNotFoundException e)
+		catch (Exception e)
 		{
-			System.out.println("Cannot find file \"" + filename + "\".");
-			quit();
+			errorMessage("Cannot open file \"Levels/Level" + level + ".data\".");
 			return;
 		}
 
@@ -405,7 +420,7 @@ public class Blocks{
 			squares = new Grid(numRows, numCols);
 			display.configureForSize(numRows, numCols);
 			display.drawStatusMessage("Loading level " + level + "...");
-			for (int row = 0; row < numRows; row++)
+			for (int row = numRows - 1; row >= 0; row--)
 			{
 				for (int col = 0; col < numCols; col++)
 				{
@@ -414,6 +429,42 @@ public class Blocks{
 
 				// Skip over newline at end of row
 				in.readLine();
+			}
+			
+			for (int row = 0; row < numRows; row++) {
+				for ( int col = 0; col < numCols; col++) {
+					
+					Square sq = squareAt(new Location(row, col));
+					
+					switch (gt) {
+					case UNLABELED_GAME:
+						if(sq.getContents() instanceof Box) {
+							sq.getContents().setHidden(true);
+						}
+						
+						if(col >= numCols / 2) {
+							swapSquares(sq, squareAt(new Location(row, numCols - col - 1)));
+						}
+					case REGULAR_GAME:
+						if(sq instanceof Cement) {
+							sq = new Square(sq.getLocation(), this, '\0');
+							squares.setElementAt(sq.getLocation(), sq);
+							sq.drawSelf();
+						}
+						break;
+						
+					case IMMOVABLE_GAME:
+						if(sq.getContents() instanceof Box) {
+							sq.getContents().setHidden(true);
+							sq.drawSelf();
+						}
+						
+						if(col >= numCols / 2 && row >= numRows / 2) {
+							swapSquares(sq, squareAt(new Location(numRows - row - 1, numCols - col - 1)));
+						}
+						break;
+					}
+				}
 			}
 			display.drawStatusMessage("Loaded level " + level + "...");
 			display.setVisible(true);
@@ -454,36 +505,6 @@ public class Blocks{
 			square = new Square(location, this, '\0');
 			square.addContents(new Box(square, this, '\0'));
 			break;
-		case 'a':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '0'));
-			track.setElementAt(location, 0);
-			break;
-		case 'b':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '1'));
-			track.setElementAt(location, 1);
-			break;
-		case 'c':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '2'));
-			track.setElementAt(location, 2);
-			break;
-		case 'd':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '3'));
-			track.setElementAt(location, 3);
-			break;
-		case 'e':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '4'));
-			track.setElementAt(location, 4);
-			break;
-		case 'f':
-			square = new Square(location, this, '\0');
-			square.addContents(new Box(square, this, '5'));
-			track.setElementAt(location, 5);
-			break;
 		// Goals
 		case '*': //goal with box already on it
 			square = new Goal(location, this, '\0');
@@ -494,34 +515,6 @@ public class Blocks{
 			square = new Goal(location, this, '\0');
 			incrementSlots();
 			break;
-		case '0':
-			square = new Goal(location, this, '0');
-			incrementSlots();
-			break;
-		case '1':
-			square = new Goal(location, this, '1');
-			incrementSlots();
-			break;
-		case '2':
-			square = new Goal(location, this, '2');
-			incrementSlots();
-			break;
-		case '3':
-			square = new Goal(location, this, '3');
-			incrementSlots();
-			break;
-		case '4':
-			square = new Goal(location, this, '4');
-			incrementSlots();
-			break;
-		case '5':
-			square = new Goal(location, this, '5');
-			incrementSlots();
-			break;
-		case '6':
-			square = new Goal(location, this, '6');
-			incrementSlots();
-			break;
 		case '^':
 			square = new Cement(location, this, '\0');
 			break;
@@ -529,15 +522,26 @@ public class Blocks{
 			square = new Square(location, this, '\0');
 			man = new Man(square, this, '\0');
 			square.addContents(man);
+			track.setMan(man);
 			break;
 		
 		case '!':
 			square = new Space(location, this, '\0');
 			break;
 		}
+		
+		if('0' <= ch && ch <= '9') {
+			square = new Goal(location, this, ch);
+			incrementSlots();
+		}
+		else if('a' <= ch && ch <= 'j') {
+			square = new Square(location, this, '\0');
+			square.addContents(new Box(square, this, (char)(ch - 'a' + '0')));
+			track.setElementAt(location, ch - 'a');
+		}
 
 		if (square == null) {
-			System.out.println("problem interpreting character " + ch);
+			errorMessage("problem interpreting character " + ch);
 			return;
 		}
 
@@ -553,5 +557,22 @@ public class Blocks{
 	public Square squareAt(Location location) {
 		return (squares.inBounds(location) ? ((Square) squares
 				.elementAt(location)) : null);
+	}
+	
+	private void swapSquares(Square sq1, Square sq2) {
+		Location swapLoc = sq1.getLocation();
+		
+		squares.setElementAt(sq1.getLocation(), sq2);
+		squares.setElementAt(sq2.getLocation(), sq1);
+		
+		sq1.setLocation(sq2.getLocation());
+		sq2.setLocation(swapLoc);
+		
+		sq1.drawSelf();
+		sq2.drawSelf();
+	}
+	
+	private void errorMessage(String message) {
+		JOptionPane.showMessageDialog(display, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 }
