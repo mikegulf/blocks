@@ -1,8 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* comp285 Command.java
- * --------------
- */
 import java.awt.event.KeyEvent;
 
 public class Command {

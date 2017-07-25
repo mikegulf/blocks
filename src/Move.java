@@ -1,8 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* comp285 Move.java
- * --------------
- */
 import java.awt.event.KeyEvent;
 
 public class Move {

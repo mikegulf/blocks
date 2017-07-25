@@ -1,9 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* comp285 Sokoban class
- * ---------------
- * This is the top level game class.
- */
 
 import java.io.BufferedReader;
 import java.io.FileReader;
