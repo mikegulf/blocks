@@ -1,8 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* Man.java
- * --------------
- */
 class Man extends Thing {
 	public Man(Square sq, Blocks g, char ch) {
 		super(sq, g, ch);

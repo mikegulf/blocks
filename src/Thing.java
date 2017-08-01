@@ -1,8 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* Thing.java
- * --------------
- */
 abstract class Thing {
 	protected Square square;
 	protected Blocks game;

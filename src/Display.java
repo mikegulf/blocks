@@ -1,8 +1,4 @@
-//---------------------------------------------------------------80 columns---|
 
-/* comp285 Display.java
- * --------------
- */
 
 import java.awt.BorderLayout;
 import java.awt.Color;
