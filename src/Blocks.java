@@ -351,11 +351,12 @@ public class Blocks{
 				replayLevel = true;
 				break;
 			case Command.Jump:
-				Vector<Move> moves = search.getMovesForLocation(man.getLocation(), cmd.getGoal());
-				while (moves.size() > 0)
-				{
-					man.doMove(moves.remove(0));
-				}
+//				Vector<Move> moves = search.getMovesForLocation(man.getLocation(), cmd.getGoal());
+//				while (moves.size() > 0)
+//				{
+//					man.doMove(moves.remove(0));
+//				}
+				System.out.println(cmd.getGoal());
 				break;
 			case Command.Directional:
 				
@@ -400,9 +401,7 @@ public class Blocks{
 		}
 
 		try
-		{
-			//tracking of boxes for each move
-			
+		{			
 			
 			int numRows = Integer.valueOf(in.readLine().trim()).intValue();
 			int numCols = Integer.valueOf(in.readLine().trim()).intValue();
@@ -431,12 +430,15 @@ public class Blocks{
 					
 					switch (gameType) {
 					case UNLABELED_GAME:
-						if(sq.getContents() instanceof Box) {
-							sq.getContents().setHidden(true);
-						}
 						
 						if(col >= numCols / 2) {
 							swapSquares(sq, squareAt(new Location(row, numCols - col - 1)));
+						}
+						
+
+						if(sq.getContents() instanceof Box) {
+							sq.getContents().setHidden(true);
+							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 					case REGULAR_GAME:
 						if(sq instanceof Cement) {
@@ -448,33 +450,44 @@ public class Blocks{
 
 					case IRRELEVANT_GAME:
 						
+						if(row >= numRows / 2) {
+							swapSquares(sq, squareAt(new Location(numRows - row - 1, col)));
+						}
+						
 						if(sq.getContents() instanceof Box) {
 							sq.getContents().setHidden(true);
+							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 						else if(sq instanceof Cement) {
 							sq = new Square(sq.getLocation(), this, '\0');
 							sq.addContents(new Box(sq, this, '\0'));
 							squares.setElementAt(sq.getLocation(), sq);
 							
-							//Use numBoxes as an unused valid value for the box
+							//Use numBoxes as an unused valid value for the irrelevant box
 							track.setElementAt(sq.getLocation(), numBoxes);
 						}
-						
-						if(row > numRows / 2) {
-							swapSquares(sq, squareAt(new Location(numRows - row - 1, col)));
-						}
-						
 						break;
 						
 					case IMMOVABLE_GAME:
+
 						if(sq.getContents() instanceof Box) {
 							sq.getContents().setHidden(true);
+							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 						
-						if(col >= numCols / 2 && row >= numRows / 2) {
+						if(row > numRows - col - 1 || (row == numRows - col - 1 && row >= numRows / 2)) {
+							
 							swapSquares(sq, squareAt(new Location(numRows - row - 1, numCols - col - 1)));
+							
+							sq = squareAt(new Location(row, col));
+							
+							if(sq.getContents() instanceof Box) {
+								sq.getContents().setHidden(true);
+								track.setElementAt(sq.getLocation(), sq.pch);
+							}
+							
 						}
-						break;
+						
 					default:
 						break;
 					}
@@ -486,6 +499,7 @@ public class Blocks{
 			display.grabFocus();
 			undoMoveHistory.clear();
 			totalMoves = 0;
+			track.setMan(man);
 		}
 		catch (IOException e)
 		{
@@ -537,7 +551,6 @@ public class Blocks{
 			square = new Square(location, this, '\0');
 			man = new Man(square, this, '\0');
 			square.addContents(man);
-			track.setMan(man);
 			break;
 		
 		case '!':

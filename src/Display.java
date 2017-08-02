@@ -367,7 +367,7 @@ public class Display extends JApplet
 
     public synchronized void addCommand(MouseEvent me)
     {
-		int row = (me.getPoint().y) / BlockSize;
+		int row = gridCanvas.numRows - 1 - (me.getPoint().y) / BlockSize;
 		int col = (me.getPoint().x) / BlockSize;
 		Location loc = new Location(row, col);
 		Command cmd = new Command(loc);
