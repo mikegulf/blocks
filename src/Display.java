@@ -69,14 +69,21 @@ public class Display extends JApplet
         	public void run() {
         		game.play(9, directory.getPath());
         		game.play(9, directory.getPath(), Blocks.GameType.UNLABELED_GAME);
+        		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
         		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
+        		finishLine();
         	}
         }).start();
 	}
 	
 	@Override
-	public void stop() {
+	public void destroy() {
+
+		game.quit();
 		
+	}
+	
+	public void finishLine() {
 		getContentPane().removeAll();
 		
 		JTextPane textarea = new JTextPane();
@@ -150,7 +157,7 @@ public class Display extends JApplet
 		public GridCanvas(int size)
 		{	
 		    setBackground(Color.white);
-		    setFont(new Font("SansSerif", Font.PLAIN, 8));
+		    setFont(new Font("SansSerif", Font.PLAIN, 12));
 		    blockSize = size;
 		}
 		
@@ -360,7 +367,7 @@ public class Display extends JApplet
 
     public synchronized void addCommand(MouseEvent me)
     {
-		int row = (me.getPoint().y) / BlockSize;
+		int row = gridCanvas.numRows - 1 - (me.getPoint().y) / BlockSize;
 		int col = (me.getPoint().x) / BlockSize;
 		Location loc = new Location(row, col);
 		Command cmd = new Command(loc);
