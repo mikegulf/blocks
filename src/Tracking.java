@@ -1,4 +1,3 @@
-
 import java.util.ArrayList;
 
 //Quick fix to allow compilation
@@ -9,7 +8,7 @@ public class Tracking {
 	private ArrayList<Location[]> boxGrid;
 	private ArrayList<Move> moves;
 	private ArrayList<Long> times;
-	private long startTime = 0;
+	private long startTime;
 	private Man man;
 	private Location start;
 	
@@ -32,6 +31,19 @@ public class Tracking {
 		start = man.getSquare().getLocation();
 	}
 	
+	public void startGame(Grid g) {
+		for(int i = 0; i < g.numRows(); ++i) {
+			for(int j = 0; j < g.numCols(); ++j) {
+				Location loc = new Location(i,j);
+				Square sq = (Square) g.elementAt(loc);
+				if (sq.getContents() instanceof Box && sq.getContents().pch > 0) {
+					setElementAt(loc, sq.getContents().pch - '0');
+				}
+			}
+		}
+		startTime = System.currentTimeMillis();
+	}
+	
 	public void copyLocationsNextMove() {
 		
 		for(int i = 0; i < nBoxes; ++i) {
@@ -45,12 +57,7 @@ public class Tracking {
 	}
 	
 	public void setNextMove(Move m) {
-		if(startTime == 0) {
-			startTime = System.currentTimeMillis();
-			times.add((long) 0);
-		}
-		else
-			times.add(System.currentTimeMillis() - startTime);
+		times.add(System.currentTimeMillis() - startTime);
 		moves.add(m);
 		currentMove++;
 		boxGrid.add(currentMove, new Location[nBoxes]);

@@ -163,7 +163,7 @@ public class Blocks{
 		PrintWriter out = null;
 		String filename;
 		
-		filename = dir + "\\" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".txt";
+		filename = dir + "\\" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
 		
         try {
             out = new PrintWriter(filename);
@@ -196,7 +196,7 @@ public class Blocks{
 		
 		String filename;
 		
-		filename = dir + "\\blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".txt";
+		filename = dir + "\\blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
 		
 		Location[][] obj = track.getGrid();
 		
@@ -210,22 +210,19 @@ public class Blocks{
              	else
              		out.write("box" + i + "x,box" + i + "y,box" + i + "moved,");
             }
-            out.write("timestamp" + System.lineSeparator());
-            
-            Location[] lastMove = obj[0];
+            out.write("timestamp,level,condition" + System.lineSeparator());
             
             for (int move = 0; move <= track.getCurrentMove(); move++)
 			{
             	for (int box = 0; box < track.getNumBoxes(); box++)
             	{
 					out.write(obj[move][box].toString() + ",");
-					out.write((obj[move][box] == lastMove[box]) ? "0," : "1,");
+					if(move < track.getCurrentMove())
+						out.write((obj[move][box] == obj[move+1][box]) ? "0," : "1,");
+					else
+						out.write("0,");
 				}
-            	if(move == track.getCurrentMove())
-            		out.write(System.lineSeparator());
-            	else
-            		out.write(track.getTimeStamp(move) + System.lineSeparator());
-				lastMove = obj[move];
+            	out.write((move < track.getCurrentMove() ? track.getTimeStamp(move) : "" ) + "," + level + "," + gameType.toString() + System.lineSeparator());
 			}
 
             //System.out.println(Arrays.deepToString(track.getGrid()));
@@ -438,7 +435,6 @@ public class Blocks{
 
 						if(sq.getContents() instanceof Box) {
 							sq.getContents().setHidden(true);
-							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 					case REGULAR_GAME:
 						if(sq instanceof Cement) {
@@ -456,7 +452,6 @@ public class Blocks{
 						
 						if(sq.getContents() instanceof Box) {
 							sq.getContents().setHidden(true);
-							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 						else if(sq instanceof Cement) {
 							sq = new Square(sq.getLocation(), this, '\0');
@@ -472,7 +467,6 @@ public class Blocks{
 
 						if(sq.getContents() instanceof Box) {
 							sq.getContents().setHidden(true);
-							track.setElementAt(sq.getLocation(), sq.pch);
 						}
 						
 						if(row > numRows - col - 1 || (row == numRows - col - 1 && row >= numRows / 2)) {
@@ -483,7 +477,6 @@ public class Blocks{
 							
 							if(sq.getContents() instanceof Box) {
 								sq.getContents().setHidden(true);
-								track.setElementAt(sq.getLocation(), sq.pch);
 							}
 							
 						}
@@ -497,9 +490,12 @@ public class Blocks{
 			display.drawStatusMessage("Loaded level " + level + "...");
 			display.setVisible(true);
 			display.grabFocus();
+			
 			undoMoveHistory.clear();
 			totalMoves = 0;
+			
 			track.setMan(man);
+			track.startGame(squares);
 		}
 		catch (IOException e)
 		{
@@ -565,7 +561,6 @@ public class Blocks{
 		else if('a' <= ch && ch <= 'j') {
 			square = new Square(location, this, '\0');
 			square.addContents(new Box(square, this, (char)(ch - 'a' + '0')));
-			track.setElementAt(location, ch - 'a');
 		}
 
 		if (square == null) {
