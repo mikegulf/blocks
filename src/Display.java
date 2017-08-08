@@ -13,6 +13,7 @@ import java.awt.MediaTracker;
 import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -22,9 +23,15 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
 import javax.swing.JApplet;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTextPane;
+import javax.swing.SpinnerNumberModel;
 
 
 /**
@@ -45,13 +52,31 @@ public class Display extends JApplet
 	public void init() {
 		
 		NamedImage.preloadImages(this);
-
-		configureWindow(0,0);
+		game = new Blocks(this);
 	}
+	Thread gt = null;
 	
 	@Override
 	public void start() {
+		if(gt == null) {
+			gt = new Thread() {
+				@Override
+				public void run() {
+					gamePlay();
+				}
+			};
+			gt.start();
+		}
+	}
+	
+	@Override
+	public void destroy() {
+
+		game.quit();
 		
+	}
+	
+	private void gamePlay() {
 		long startTime = System.currentTimeMillis();
 		File directory = new File(Long.toString(startTime));
         if (!directory.exists()) {
@@ -61,25 +86,15 @@ public class Display extends JApplet
                 System.out.println(directory + " directory already exists.");
             }
         }
-        game = new Blocks(this);
-
-        (new Thread() {
-        	@Override
-        	public void run() {
-        		game.play(9, directory.getPath());
-        		game.play(9, directory.getPath(), Blocks.GameType.UNLABELED_GAME);
-        		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
-        		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
-        		finishLine();
-        	}
-        }).start();
-	}
-	
-	@Override
-	public void destroy() {
-
-		game.quit();
-		
+        
+		game.mapTest(directory.getPath());
+		game.play(9, directory.getPath());
+		game.play(9, directory.getPath(), Blocks.GameType.UNLABELED_GAME);
+		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
+		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
+		finishLine();
+		//TODO upload data to the server and delete local files
+		//uploadAndDelete(directory);
 	}
 	
 	public void finishLine() {
@@ -383,8 +398,9 @@ public class Display extends JApplet
 		revalidate();
     }
 
-    private void configureWindow(int numRows, int numCols)
+    private void configureBlocks(int numRows, int numCols)
     {
+    	getContentPane().removeAll();
 		getContentPane().setLayout(new BorderLayout(Margin, Margin));
 		setBackground(Color.lightGray);
 				
@@ -437,6 +453,105 @@ public class Display extends JApplet
 				}
 		    }
 		);
+    }
+       
+    private int mapLevel;
+    public int[][] mapPrompt(String[][] prompts) {
+    	
+    	int[][] results = new int[prompts.length][];
+    	mapLevel = 0;
+    	final Display app = this;
+    	
+    	getContentPane().removeAll();
+    	getContentPane().setLayout(new BorderLayout(Margin, Margin));
+    	
+    	JLabel imgLabel = new JLabel();
+    	imgLabel.setIcon(
+    			new ImageIcon(this.getImage(this.getClass().getClassLoader().getResource("Images/map" + mapLevel + ".png"))));
+    	
+    	getContentPane().add(imgLabel, BorderLayout.CENTER);
+    	
+    	JPanel panel = new JPanel();
+    	
+    	panel.setLayout(new GridLayout(prompts[mapLevel].length + 1,2));
+    	
+    	JLabel timeLabel = new JLabel();
+    	
+    	timeLabel.setFont(new Font(FontName, Font.PLAIN, 54));
+    	
+    	getContentPane().add(timeLabel, BorderLayout.NORTH);
+    	
+    	for(String prompt : prompts[mapLevel]) {
+    		panel.add(new JLabel(prompt));
+    		panel.add(new JSpinner(new SpinnerNumberModel(0, 0, 10, 1)));
+    	}
+    	
+    	JButton button = new JButton("Enter");
+    	button.addActionListener(new AbstractAction() {
+    		private static final long serialVersionUID = 1L;
+
+			@Override
+    		public void actionPerformed(ActionEvent e) {
+				if(mapLevel < prompts.length) {
+
+					results[mapLevel] = new int[prompts[mapLevel].length];
+					for(int i = 0; i < prompts[mapLevel].length; ++i) {
+						results[mapLevel][i] = (int) ((JSpinner)panel.getComponent(2*i + 1)).getValue();
+					}
+					
+					mapLevel++;
+					if(mapLevel == prompts.length) return;
+					
+			    	imgLabel.setIcon(
+			    			new ImageIcon(app.getImage(app.getClass().getClassLoader().getResource("Images/Map" + mapLevel + ".png"))));
+					
+					panel.removeAll();
+			    	panel.setLayout(new GridLayout(prompts[mapLevel].length+1,2));
+					for(String prompt : prompts[mapLevel]) {
+			    		panel.add(new JLabel(prompt));
+			    		panel.add(new JSpinner(new SpinnerNumberModel(1, 1, prompts.length, 1)));
+			    	}
+					panel.add(button);
+					revalidate();
+				}
+    		}
+    	});
+    	
+    	panel.add(button);
+    	getContentPane().add(panel, BorderLayout.EAST);
+    	revalidate();
+    	
+    	int timeLeft = 1;
+    	int lastLevel = mapLevel;
+    	
+    	while(mapLevel < prompts.length) {
+    		
+    		if(mapLevel > 0)
+    			timeLabel.setText(String.format("%d:%02d",  timeLeft / 60, timeLeft % 60));
+    		
+    		if(lastLevel != mapLevel) {
+    			timeLeft = 60 * 3;
+    			lastLevel = mapLevel;
+    			timeLabel.setText(String.format("%d:%02d",  timeLeft / 60, timeLeft % 60));
+    		}
+    		
+    		if(timeLeft < 1 && mapLevel > 0) {
+    			button.getActionListeners()[0].actionPerformed(null);
+    		}
+    		
+    		timeLeft--;
+    		
+    		try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+    	}
+    	
+		configureBlocks(0,0);
+	    	
+    	return results;
     }
 
     public void doDrawStatusMessage(String msg)

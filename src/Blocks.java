@@ -160,7 +160,7 @@ public class Blocks{
 		PrintWriter out = null;
 		String filename;
 		
-		filename = dir + "\\" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
+		filename = dir + "/" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
 		
         try {
             out = new PrintWriter(filename);
@@ -193,7 +193,7 @@ public class Blocks{
 		
 		String filename;
 		
-		filename = dir + "\\blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
+		filename = dir + "/blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
 		
 		Location[][] obj = track.getGrid();
 		
@@ -590,6 +590,50 @@ public class Blocks{
 		
 		sq1.drawSelf();
 		sq2.drawSelf();
+	}
+	
+	/**
+	 * Runs the maze test before the actual blocks game
+	 * @param directory - directory to store the output file
+	 */
+	public void mapTest(String directory) {
+		final String[][] prompts = {{"A to Z", "E to S", "P to J", "V to K", "O to F", "G to M", "D to Q", "F to T"},
+				{"F to I", "U to D", "B to W", "Z to E", "C to K", "X to L", "Y to R", "M to J", "P to M", "N to T"},
+				{"U to B", "N to Q", "S to X", "Y to P", "Y to G", "F to L", "A to E", "K to D", "Q to C", "N to H"},
+				{"Y to R", "E to X", "L to F", "D to K", "W to Q", "C to W", "T to B", "V to P", "H to F", "C to F"},
+				{"S to Y", "X to R", "L to T", "I to R", "V to O", "J to E", "K to Q", "F to C", "Q to W", "D to K"}};
+		
+		int[][] results = new int[prompts.length][];
+		
+		results = display.mapPrompt(prompts);
+		
+		String filename = directory + "/mazeResponses.csv";
+		PrintWriter out = null;
+		
+		try {
+			out = new PrintWriter(filename);
+			out.write("map,");
+			for(int i = 0; i < prompts[1].length; ++i) {
+				out.write("response" + i);
+			}
+			out.write("\n");
+			
+			for(int i = 0; i < prompts.length; ++i) {
+				out.write(i + ",");
+				for(int resp : results[i]) {
+					out.write(resp + ",");
+				}
+				out.write("\n");
+			}
+		}
+		catch (Exception e) {
+			errorMessage("Error writing file: \"" + filename + "\", " + e);
+		}
+		finally {
+			if(out != null)
+				out.close();
+			System.out.println("--- CLOSED MAP FILE ---");
+		}
 	}
 	
 	private void errorMessage(String message) {
