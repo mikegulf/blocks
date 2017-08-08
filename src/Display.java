@@ -61,7 +61,6 @@ public class Display extends JApplet
                 System.out.println(directory + " directory already exists.");
             }
         }
-        
         game = new Blocks(this);
 
         (new Thread() {
@@ -289,7 +288,7 @@ public class Display extends JApplet
 		    // Return shared version
 		    else
 		    {
-				key.image = app.getImage(app.getCodeBase(), "Images/" + name + ".gif");
+				key.image = app.getImage(app.getClass().getClassLoader().getResource("Images/" + name + ".gif"));
 				
 				// Create image from file
 				mt.addImage(key.image, 0);

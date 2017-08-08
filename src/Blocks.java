@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -23,7 +22,6 @@ public class Blocks{
 	public static final int maximumAllowedUndos = 100;
 
 
-	private Search search;
 	private Vector<Move> undoMoveHistory = new Vector<Move>();
 
 	private int totalMoves = 0;
@@ -58,7 +56,6 @@ public class Blocks{
 	{
 		this.display = display;
 		man = null;
-		search = new Search(this);
 	}
 	
 	/**
@@ -388,12 +385,12 @@ public class Blocks{
 		BufferedReader in;
 		try
 		{
-			InputStream is = new URL(display.getCodeBase() + "Levels/level" + level + ".data").openStream();
+			InputStream is = this.getClass().getClassLoader().getResourceAsStream("Levels/Level" + level + ".data");
 			in = new BufferedReader(new InputStreamReader(is));
 		}
 		catch (Exception e)
 		{
-			errorMessage("Cannot open file \"Levels/Level" + level + ".data\".");
+			errorMessage("Cannot open file \"Levels/Level" + level + ".data\", " + e);
 			return;
 		}
 
