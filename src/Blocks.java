@@ -1,14 +1,26 @@
 
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.swing.JOptionPane;
 
@@ -632,8 +644,98 @@ public class Blocks{
 		finally {
 			if(out != null)
 				out.close();
-			System.out.println("--- CLOSED MAP FILE ---");
 		}
+	}
+	
+	/**
+	 * Zips, uploads the data directory, then deletes it all
+	 * @param dir - directory to upload
+	 */
+	public void uploadAndDelete(Path dir) {
+		
+		final String url = "";
+		final String zipFname = dir.getFileName() + ".zip";
+		
+		//First zip the directory
+		try (FileOutputStream os = new FileOutputStream(zipFname);
+				ZipOutputStream zos = new ZipOutputStream(os)) {
+			Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+				
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+	                zos.putNextEntry(new ZipEntry(dir.relativize(file).toString()));
+	                Files.copy(file, zos);
+	                zos.closeEntry();
+	                return FileVisitResult.CONTINUE;
+	            }
+
+	            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+	                zos.putNextEntry(new ZipEntry(dir.relativize(dir).toString() + "/"));
+	                zos.closeEntry();
+	                return FileVisitResult.CONTINUE;
+	            }
+
+			});
+			
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		final String CRLF = "\r\n";
+		final String boundary = Long.toHexString(System.currentTimeMillis());
+		
+		
+				
+		try {
+			URLConnection conn = new URL(url).openConnection();
+			
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
+			conn.setUseCaches(false);
+			
+			conn.setRequestProperty("Connection", "Keep-Alive");
+			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+			
+			try (OutputStream output = conn.getOutputStream();
+					PrintWriter writer = new PrintWriter(output)) {
+				
+				writer.append("--" + boundary).append(CRLF);
+			    writer.append("Content-Disposition: form-data; name=\"zipFile\"; filename=\"" + zipFname + "\"").append(CRLF);
+			    writer.append("Content-Type: application/zip").append(CRLF);
+			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
+			    writer.append(CRLF).flush();
+			    Files.copy((new File(zipFname)).toPath(), output);
+			    output.flush();
+			    writer.append(CRLF);
+			    writer.append("--" + boundary + "--").append(CRLF).flush();
+			     
+			}
+			
+			conn.connect();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+			Files.delete(new File(zipFname).toPath());
+			
+			Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+				
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+	                Files.delete(file);
+	                return FileVisitResult.CONTINUE;
+	            }
+			});
+			
+			Files.delete(dir);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		
 	}
 	
 	private void errorMessage(String message) {
