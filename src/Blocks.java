@@ -1,6 +1,7 @@
 
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -653,7 +654,7 @@ public class Blocks{
 	 */
 	public void uploadAndDelete(Path dir) {
 		
-		final String url = "";
+		final String url = "https://www.mastergunner.net/blocks/upload.php";
 		final String zipFname = dir.getFileName() + ".zip";
 		
 		//First zip the directory
@@ -693,14 +694,13 @@ public class Blocks{
 			conn.setDoInput(true);
 			conn.setUseCaches(false);
 			
-			conn.setRequestProperty("Connection", "Keep-Alive");
 			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
 			
 			try (OutputStream output = conn.getOutputStream();
 					PrintWriter writer = new PrintWriter(output)) {
 				
 				writer.append("--" + boundary).append(CRLF);
-			    writer.append("Content-Disposition: form-data; name=\"zipFile\"; filename=\"" + zipFname + "\"").append(CRLF);
+			    writer.append("Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + zipFname + "\"").append(CRLF);
 			    writer.append("Content-Type: application/zip").append(CRLF);
 			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
 			    writer.append(CRLF).flush();
@@ -711,7 +711,11 @@ public class Blocks{
 			     
 			}
 			
-			conn.connect();
+			try(DataInputStream in = new DataInputStream(conn.getInputStream())) {
+				String str;
+				while((str = in.readLine()) != null)
+					System.out.println(str);
+			}
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

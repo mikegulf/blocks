@@ -119,7 +119,7 @@ public class Display extends JApplet
 		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
 		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
 		finishLine();
-//		game.uploadAndDelete(directory.toPath());
+		game.uploadAndDelete(directory.toPath());
 
 	}
 	
