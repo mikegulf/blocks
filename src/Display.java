@@ -19,6 +19,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -47,6 +54,7 @@ public class Display extends JApplet
 	public Display() {
 	}
 	Blocks game;
+	File directory;
 	
 	@Override
 	public void init() {
@@ -74,11 +82,29 @@ public class Display extends JApplet
 
 		game.quit();
 		
+		if(Files.exists(directory.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+			try {
+				Files.walkFileTree(directory.toPath(), new SimpleFileVisitor<Path>() {
+					
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				        Files.delete(file);
+				        return FileVisitResult.CONTINUE;
+				    }
+				});
+				
+				Files.delete(directory.toPath());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		
 	}
 	
 	private void gamePlay() {
 		long startTime = System.currentTimeMillis();
-		File directory = new File(Long.toString(startTime));
+		directory = new File(Long.toString(startTime));
         if (!directory.exists()) {
             if (directory.mkdir()) {
                 System.out.println(directory + " directory was created.");
@@ -93,8 +119,8 @@ public class Display extends JApplet
 		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
 		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
 		finishLine();
-		//TODO upload data to the server and delete local files
-		//uploadAndDelete(directory);
+//		game.uploadAndDelete(directory.toPath());
+
 	}
 	
 	public void finishLine() {
@@ -467,7 +493,7 @@ public class Display extends JApplet
     	
     	JLabel imgLabel = new JLabel();
     	imgLabel.setIcon(
-    			new ImageIcon(this.getImage(this.getClass().getClassLoader().getResource("Images/map" + mapLevel + ".png"))));
+    			new ImageIcon(this.getImage(this.getClass().getClassLoader().getResource("Images/Map" + mapLevel + ".png"))));
     	
     	getContentPane().add(imgLabel, BorderLayout.CENTER);
     	
