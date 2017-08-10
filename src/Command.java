@@ -48,11 +48,6 @@ public class Command {
 		}
 	}
 
-	Command(Location loc) {
-		this.type = Jump;
-		this.goal = loc;
-	}
-
 	public Location getGoal() {
 		return goal;
 	};
