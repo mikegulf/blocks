@@ -10,16 +10,14 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Label;
 import java.awt.MediaTracker;
-import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -29,16 +27,20 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
 
 import javax.swing.AbstractAction;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JApplet;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextPane;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 
 
 /**
@@ -51,8 +53,23 @@ import javax.swing.SpinnerNumberModel;
 
 public class Display extends JApplet
 {
+	
+    static final long serialVersionUID = 1;
+    
+    private static final int Margin = 0;
+    private static final String FontName = "Helvetica";
+    
+
+	final Font INSTRUCTION_FONT = new Font(FontName, Font.PLAIN, 15);
+	final Font PROMPT_FONT = new Font(FontName, Font.PLAIN, 18);
+	final Font TIME_FONT = new Font(FontName, Font.BOLD, 54);
+	final Font MSG_FONT = new Font(FontName, Font.PLAIN, 12);
+	
+    private static final int BlockSize = 40;
+	
 	public Display() {
 	}
+	
 	Blocks game;
 	File directory;
 	
@@ -61,20 +78,25 @@ public class Display extends JApplet
 		
 		NamedImage.preloadImages(this);
 		game = new Blocks(this);
+		
 	}
-	Thread gt = null;
 	
 	@Override
 	public void start() {
-		if(gt == null) {
-			gt = new Thread() {
-				@Override
-				public void run() {
-					gamePlay();
-				}
-			};
-			gt.start();
-		}
+		
+		directory = new File(Long.toString(System.currentTimeMillis()));
+        if (!directory.exists()) {
+            if (directory.mkdir()) {
+                System.out.println(directory + " directory was created.");
+            } else {
+                System.out.println(directory + " directory already exists.");
+            }
+        }
+        (new Thread() {
+        	public void run() {
+        		gamePlay();
+        	}
+        }).start();
 	}
 	
 	@Override
@@ -94,7 +116,6 @@ public class Display extends JApplet
 				
 				Files.delete(directory.toPath());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
@@ -103,38 +124,76 @@ public class Display extends JApplet
 	}
 	
 	private void gamePlay() {
-		long startTime = System.currentTimeMillis();
-		directory = new File(Long.toString(startTime));
-        if (!directory.exists()) {
-            if (directory.mkdir()) {
-                System.out.println(directory + " directory was created.");
-            } else {
-                System.out.println(directory + " directory already exists.");
-            }
-        }
-        
+		
+		instructionPrompt("You are being asked to join a research study looking to understand how people make spatial\r\n" + 
+				"decisions. Your decision to be in this research is voluntary. You can stop at any time. You do not\r\n" + 
+				"have to answer any questions you do not want to answer.\r\n" + 
+				"You will first complete the Map Planning Task to assess your spatial ability. It contains a\r\n" + 
+				"practice map, followed by 4 additional maps. Then you will get directions to complete the game.\r\n" + 
+				"In the game you will use the avatar to push boxes to target locations. You will complete 4\r\n" + 
+				"different sets of tasks, each having 9 levels of increased difficulty. You will be notified at the\r\n" + 
+				"completion of the study.\r\n" + 
+				"You will be paid $.40 for completing the Map Planning Task and $.03 per level you complete\r\n" + 
+				"with a total of up to a total of $1.48 for taking part in this study. The policy for payment will\r\n" + 
+				"follow the guidelines through Mechanical Turk.\r\n" + 
+				"You have the right to obtain answers to any questions you might have about this research both\r\n" + 
+				"while you take part in the study and after you leave the research site. Please contact Dr. Kristin\r\n" + 
+				"Schaefer-Lay, Kristin.e.schaefer-lay.civ@mail.mil, for more information about this study. You\r\n" + 
+				"may also contact the Human Protection Administrator (HPA) of the Army Research Laboratory\r\n" + 
+				"at (410) 278-5928 with questions, complaints, or concerns about this research, or if you feel this\r\n" + 
+				"study has harmed you. The HPA can also answer questions about your rights as a research\r\n" + 
+				"subject. You may also call the HPA if you cannot reach the research team or wish to talk to\r\n" + 
+				"someone who is not a member of the research team.", 
+				
+				"Click here to begin the Map Planning Task Practice Map");
 		game.mapTest(directory.getPath());
+		
+		game.practiceRound();
+		
+		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will\r\n" + 
+				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move\r\n" + 
+				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to\r\n" + 
+				"target location 1). Please note that the numbers are only to link the box with a target location and\r\n" + 
+				"are not a suggested order for moving the boxes.", 
+				
+				"Start Set 1");
 		game.play(9, directory.getPath());
+		
+		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You\r\n" + 
+				"will control an avatar through a room by using the arrow keys on your keyboard. The goal is to\r\n" + 
+				"move the correctly labeled box to the correctly labeled target location (i.e., box 1 should be\r\n" + 
+				"pushed to target location 1). In this set of levels, you will not know the box label until you push\r\n" + 
+				"the box with your avatar. Please note that the numbers are only to link the box with a target\r\n" + 
+				"location and are not a suggested order for moving the boxes.",
+				
+				"Start Set 2");
 		game.play(9, directory.getPath(), Blocks.GameType.UNLABELED_GAME);
+		
+		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will\r\n" + 
+				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move\r\n" + 
+				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to\r\n" + 
+				"target location 1). In this set of levels, you will not know the box label until you push the box\r\n" + 
+				"with your avatar. Please note that the numbers are only to link the box with a target location and\r\n" + 
+				"are not a suggested order for moving the boxes. In addition, there is an extra box that does not\r\n" + 
+				"have a label. This box is movable but will not have a target location.", 
+				
+				"Start Set 3");
 		game.play(9, directory.getPath(), Blocks.GameType.IRRELEVANT_GAME);
+		
+		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will\r\n" + 
+				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move\r\n" + 
+				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to\r\n" + 
+				"target location 1). In this set of levels, you will not know the box label until you push the box\r\n" + 
+				"with your avatar. Please note that the numbers are only to link the box with a target location and\r\n" + 
+				"are not a suggested order for moving the boxes. In addition, there is an extra box that does not\r\n" + 
+				"have a label. This box is immovable. When you push this box with your avatar, it will change\r\n" + 
+				"color to let you know that it is an immovable box.", 
+				
+				"Start Set 4");
 		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
-		finishLine();
+		
 		game.uploadAndDelete(directory.toPath());
-
-	}
-	
-	public void finishLine() {
-		getContentPane().removeAll();
-		
-		JTextPane textarea = new JTextPane();
-		textarea.setEditable(false);
-		textarea.setContentType("text/html");
-		textarea.setFont(new Font(FontName, Font.PLAIN, FontSize * 10));
-		textarea.setText("<center><h1>Thanks for playing!</h1></center>");
-		
-		getContentPane().add(textarea, BorderLayout.CENTER);
-		
-		revalidate();
+		instructionPrompt("Thank you for participating in our research study.", null);
 	}
 	
 	//inner class GridCanvas
@@ -256,10 +315,10 @@ public class Display extends JApplet
 		{
 		    Rectangle r = rectForLocation(loc.getRow(), loc.getCol());
 		    
-		    if (letter > 0)
-		    {
-		    	drawCenteredString(getGraphics(), letter + "", r);
-		    }
+//		    if (letter > 0)
+//		    {
+//		    	drawCenteredString(getGraphics(), letter + "", r);
+//		    }
 		    
 		    images.add(new BlockImage(r, ni.image, letter));
 		    
@@ -383,16 +442,10 @@ public class Display extends JApplet
 		    return ((o instanceof NamedImage) && name.equals(((NamedImage)o).name));
 		}
     }
-    
-    
-    static final long serialVersionUID = 1;
-    private static final int Margin = 10;
-    private static final int FontSize = 10; 
-    private static final String FontName = "Helvetica";
-    private static final int BlockSize = 40;
+	
+	private Label msgField;
+	
     private GridCanvas gridCanvas;
-
-    private Label msgField;
 
     private Vector<Command> cmds = new Vector<Command>();
     
@@ -404,42 +457,37 @@ public class Display extends JApplet
 		// Rendezvous with anyone waiting
 		notify();		
     }
-
-    public synchronized void addCommand(MouseEvent me)
-    {
-		int row = gridCanvas.numRows - 1 - (me.getPoint().y) / BlockSize;
-		int col = (me.getPoint().x) / BlockSize;
-		Location loc = new Location(row, col);
-		Command cmd = new Command(loc);
-		cmds.addElement(cmd);
-		
-		// Rendezvous with anyone waiting
-		notify();		
-    }
     
 
     public void configureForSize(int numRows, int numCols)
     {
-		gridCanvas.configureForSize(numRows, numCols);
-		revalidate();
+    	try {
+			SwingUtilities.invokeAndWait(() -> {
+				configureBlocks(numRows, numCols);
+		    	gridCanvas.configureForSize(numRows, numCols);
+		    	repaint();
+				revalidate();
+			});
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
     }
 
     private void configureBlocks(int numRows, int numCols)
     {
     	getContentPane().removeAll();
+    	
 		getContentPane().setLayout(new BorderLayout(Margin, Margin));
-		setBackground(Color.lightGray);
 				
 		JTextPane textarea = new JTextPane();
 		textarea.setEditable(false);
 		textarea.setContentType("text/html");
-		textarea.setFont(new Font(FontName, Font.PLAIN, FontSize));
+		textarea.setFont(INSTRUCTION_FONT);
 		textarea.setText("<center>Move with the <b>arrow keys</b>, and <b>U</b> for undo.<br />"
 				+ "To move to a square, where there is a clear path, just click the mouse.<br />"
 				+ "Press <b>N</b> to skip this level, <b>Q</b> to quit, and <b>R</b> to restart this level.</center>");
 		
-		Panel bp = new Panel();
-		bp.setFont(new Font(FontName, Font.PLAIN, FontSize));
+		JPanel bp = new JPanel();
 		// numRows, numCols, hGap, vGap
 		bp.setLayout(new GridLayout(2, 1, 10, 0)); 
 		//bp.add(new Label("Move with the <b>arrow keys</b>, and <b>U</b> for undo.", Label.CENTER));
@@ -447,7 +495,7 @@ public class Display extends JApplet
 		//bp.add(new Label("To move to a square, where there is a clear path, just click the mouse.", Label.CENTER));
 		//bp.add(new Label("Press <b>N</b> to skip this level, <b>Q</b> to quit, and <b>R</b> to restart this level.", Label.CENTER));
 		bp.add(msgField = new Label("New game", Label.CENTER));
-		msgField.setFont(new Font (FontName, Font.BOLD, FontSize + 2));
+		msgField.setFont(MSG_FONT);
 		
 		JPanel panel = new JPanel();
 		gridCanvas = new GridCanvas(BlockSize);
@@ -467,23 +515,61 @@ public class Display extends JApplet
 				}
 			}
 		);
-		
-		gridCanvas.addMouseListener
-		(
-			new MouseAdapter()
-			{
-				@Override
-				public void mouseClicked(MouseEvent me)
-				{
-					Display.this.addCommand(me);
-				}
-		    }
-		);
     }
-       
-    private int mapLevel;
-    public int[][] mapPrompt(String[][] prompts) {
+    
+
+	public void instructionPrompt(String instructions, String label) {
+		
+		final Semaphore clicked = new Semaphore(0);
+		
+    	try {
+			
+			SwingUtilities.invokeAndWait(() -> {
+				getContentPane().removeAll();
+				
+				getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+				
+				JTextPane textarea = new JTextPane();
+				textarea.setEditable(false);
+				textarea.setContentType("text/html");
+				textarea.setText("<html><style> center { font: " + PROMPT_FONT.getSize() + " " + PROMPT_FONT.getFamily() + "}</style><center>"
+						+ instructions + "</center></html>");
+				
+				getContentPane().add(textarea);
+				
+				if(label != null) {
+					JButton button = new JButton(label);
+			    	button.addActionListener(new AbstractAction() {
+			    		private static final long serialVersionUID = 1L;
+	
+						@Override
+			    		public void actionPerformed(ActionEvent e) {
+							clicked.release();
+			    		}
+			    	});
+			        	
+			    	getContentPane().add(button);
+				}
+		    	
+				repaint();
+				revalidate();
+			});
+		}catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
     	
+    	try {
+			clicked.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+   	}
+	
+       
+    int mapLevel;
+	int timeLeft;
+    public int[][] mapPrompt(String[][] prompts, String[] answers) {
+    	    	
     	int[][] results = new int[prompts.length][];
     	mapLevel = 0;
     	final Display app = this;
@@ -491,42 +577,95 @@ public class Display extends JApplet
     	getContentPane().removeAll();
     	getContentPane().setLayout(new BorderLayout(Margin, Margin));
     	
+    	//TODO show titles
+    	
     	JLabel imgLabel = new JLabel();
     	imgLabel.setIcon(
     			new ImageIcon(this.getImage(this.getClass().getClassLoader().getResource("Images/Map" + mapLevel + ".png"))));
     	
     	getContentPane().add(imgLabel, BorderLayout.CENTER);
     	
-    	JPanel panel = new JPanel();
+    	JPanel labelPanel = new JPanel();
     	
-    	panel.setLayout(new GridLayout(prompts[mapLevel].length + 1,2));
+    	JTextPane instructionPane = new JTextPane();
+		instructionPane.setEditable(false);
+		instructionPane.setFont(INSTRUCTION_FONT);
+		instructionPane.setText("This is a test of your ability to find the shortest route between two places as quickly as possible.\r\n" + 
+    			"The drawing below is a map of a city. The dark lines are streets. The circles are road-blocks, and\r\n" + 
+    			"you cannot pass at the places where there are circles. The numbered squares are buildings. You\r\n" + 
+    			"are to find the shortest route between two lettered points. The number on the building passed is your answer.\r\n" + 
+    			"Rules:\r\n" + 
+    			"1. The shortest route will always pass along the side of one and only one building.\r\n" + 
+    			"2. A building is not considered as having been passed if a route passes only a corner and a side.\r\n" + 
+    			"3. The same numbered building may be used on more than one route.\r\n" + 
+    			"Practice by finding the shortest route between the various points listed at the right of the map.");
+		    	
+    	labelPanel.add(instructionPane);
     	
     	JLabel timeLabel = new JLabel();
     	
-    	timeLabel.setFont(new Font(FontName, Font.PLAIN, 54));
+    	timeLabel.setFont(TIME_FONT);
     	
-    	getContentPane().add(timeLabel, BorderLayout.NORTH);
+    	labelPanel.add(timeLabel);
+    	
+    	getContentPane().add(labelPanel, BorderLayout.NORTH);
+    	
+    	JPanel panel = new JPanel();
+    	
+    	panel.setLayout(new GridLayout(prompts[mapLevel].length +1, 1));
     	
     	for(String prompt : prompts[mapLevel]) {
-    		panel.add(new JLabel(prompt));
-    		panel.add(new JSpinner(new SpinnerNumberModel(0, 0, 10, 1)));
+    		JLabel lbl = new JLabel(prompt);
+    		panel.add(lbl);
+    		
+    		JSpinner spn = new JSpinner(new SpinnerNumberModel(0, 0, 10, 1));
+    		lbl.setLabelFor(spn);
+    		panel.add(spn);
     	}
     	
-    	JButton button = new JButton("Enter");
+    	JButton button = new JButton("Next");
+    	
     	button.addActionListener(new AbstractAction() {
     		private static final long serialVersionUID = 1L;
+    		boolean reviewed = false;
 
 			@Override
     		public void actionPerformed(ActionEvent e) {
+				
+				timeLeft = -1;
+				
+				//Completed practice level
+				if(!reviewed && mapLevel == 0) {
+					reviewed = true;
+					for(int i = 0; i < answers.length; ++i) {
+						JLabel l = (JLabel) panel.getComponent(2*i);
+						l.setText(String.format("<html>%s <font color='red'>(%s)</font></html>", 
+						        l.getText(), answers[i]));
+					}
+					JOptionPane.showMessageDialog(app, "The correct answers are shown in red\r\nPlease review them and select Next again when done", "Review", JOptionPane.INFORMATION_MESSAGE);
+					return;
+				}
+				
 				if(mapLevel < prompts.length) {
-
+					
 					results[mapLevel] = new int[prompts[mapLevel].length];
 					for(int i = 0; i < prompts[mapLevel].length; ++i) {
 						results[mapLevel][i] = (int) ((JSpinner)panel.getComponent(2*i + 1)).getValue();
 					}
+
+					if(++mapLevel == prompts.length) return;
 					
-					mapLevel++;
-					if(mapLevel == prompts.length) return;
+					JOptionPane.showMessageDialog(app, "Begin Map " + (mapLevel + 1) + "\r\n"
+	    					+ "You will have 3 minutes to complete 10 routes", "Next Map", JOptionPane.INFORMATION_MESSAGE);
+					
+					instructionPane.setText("This is a test of your ability to find the shortest route between two places as quickly as possible.\r\n" + 
+			    			"The drawing below is a map of a city. The dark lines are streets. The circles are road-blocks, and\r\n" + 
+			    			"you cannot pass at the places where there are circles. The numbered squares are buildings. You\r\n" + 
+			    			"are to find the shortest route between two lettered points. The number on the building passed is your answer.\r\n" + 
+			    			"Rules:\r\n" + 
+			    			"1. The shortest route will always pass along the side of one and only one building.\r\n" + 
+			    			"2. A building is not considered as having been passed if a route passes only a corner and a side.\r\n" + 
+			    			"3. The same numbered building may be used on more than one route.\r\n");
 					
 			    	imgLabel.setIcon(
 			    			new ImageIcon(app.getImage(app.getClass().getClassLoader().getResource("Images/Map" + mapLevel + ".png"))));
@@ -535,54 +674,53 @@ public class Display extends JApplet
 			    	panel.setLayout(new GridLayout(prompts[mapLevel].length+1,2));
 					for(String prompt : prompts[mapLevel]) {
 			    		panel.add(new JLabel(prompt));
-			    		panel.add(new JSpinner(new SpinnerNumberModel(1, 1, prompts.length, 1)));
+			    		panel.add(new JSpinner(new SpinnerNumberModel(0, 0, 10, 1)));
 			    	}
 					panel.add(button);
-					revalidate();
+					SwingUtilities.getRootPane(app).setDefaultButton(button);
+			    	button.requestFocus();
+					
+	    			timeLeft = 60 * 3;
+
 				}
     		}
     	});
     	
     	panel.add(button);
     	getContentPane().add(panel, BorderLayout.EAST);
-    	revalidate();
     	
-    	int timeLeft = 1;
-    	int lastLevel = mapLevel;
+    	SwingUtilities.getRootPane(this).setDefaultButton(button);
+    	button.requestFocus();
+    	
+    	revalidate();
+    	repaint();
+    	    	
+    	timeLeft = -1;
     	
     	while(mapLevel < prompts.length) {
     		
-    		if(mapLevel > 0)
+    		if(timeLeft > 0) {
     			timeLabel.setText(String.format("%d:%02d",  timeLeft / 60, timeLeft % 60));
-    		
-    		if(lastLevel != mapLevel) {
-    			timeLeft = 60 * 3;
-    			lastLevel = mapLevel;
-    			timeLabel.setText(String.format("%d:%02d",  timeLeft / 60, timeLeft % 60));
+        		timeLeft--;
     		}
-    		
-    		if(timeLeft < 1 && mapLevel > 0) {
+    		else if(timeLeft == 0) {
     			button.getActionListeners()[0].actionPerformed(null);
     		}
-    		
-    		timeLeft--;
-    		
+    		  		    		
     		try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
     	}
-    	
-		configureBlocks(0,0);
-	    	
+    		    	
     	return results;
     }
 
     public void doDrawStatusMessage(String msg)
     {
-    	msgField.setText(msg);
+    	if(msgField != null)
+    		msgField.setText(msg);
     }
     
     public void drawAtLocation(String name, char ch, Location loc)
@@ -631,6 +769,71 @@ public class Display extends JApplet
 
 	public void addToTrail(Location location) {
 		gridCanvas.addToTrail(location);
+	}
+
+	public void configurePractice(int numRows, int numCols) {
+		try {
+			SwingUtilities.invokeAndWait(() -> {
+				
+				getContentPane().removeAll();
+		    	
+				getContentPane().setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+						
+				JTextPane textarea = new JTextPane();
+				textarea.setEditable(false);
+				textarea.setContentType("text/html");
+				textarea.setText("<html><style> center { font: " + INSTRUCTION_FONT.getSize() + " " + INSTRUCTION_FONT.getFamily() + "}</style><center>" +
+						"Thank you for completing the Map Planning Task. You will now be asked to complete the Box\r\n" + 
+						"Moving Game. You will move an avatar around an open room in order to push boxes to target\r\n" + 
+						"locations. You will use the arrow keys to move the avatar. A level is complete once all boxes\r\n" + 
+						"have reached their target locations. The U key will allow you to undo a movement and the R key\r\n" + 
+						"will allow you to restart a level. You will start by completing a practice round moving 1 box to 1 target location.\r\n" + 
+						"</center></html>");
+				
+				getContentPane().add(textarea);
+				
+				JPanel panel = new JPanel();
+				gridCanvas = new GridCanvas(BlockSize);
+				gridCanvas.configureForSize(numRows, numCols);
+							
+				gridCanvas.addKeyListener
+				(
+					new KeyAdapter()
+					{
+						@Override
+						public void keyPressed(KeyEvent ke)
+						{
+						    Display.this.addCommand(ke);
+						}
+					}
+				);
+				
+				panel.add(gridCanvas);
+				
+				getContentPane().add(panel, BorderLayout.CENTER);
+				
+				JButton button = new JButton("Continue to Set 1 Instructions");
+				
+				button.addActionListener(new AbstractAction() {
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						game.quit();
+						addCommand(new KeyEvent(gridCanvas, 0, 0, 0, 0));
+					}
+					
+				});
+				
+				getContentPane().add(button);
+				
+				repaint();
+				revalidate();
+				
+			});
+		} catch (InvocationTargetException | InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }
 

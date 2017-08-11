@@ -1,7 +1,6 @@
 
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -170,13 +169,11 @@ public class Blocks{
 	 */
 	public void openFileForWrite(String dir, int level){
 		
-		PrintWriter out = null;
 		String filename;
 		
 		filename = dir + "/" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
 		
-        try {
-            out = new PrintWriter(filename);
+        try (PrintWriter out = new PrintWriter(filename)){
             			
             out.write("X,Y,direction,timestamp,level,condition" + System.lineSeparator());
             
@@ -193,12 +190,6 @@ public class Blocks{
             
         } catch (IOException ioe) {
         	errorMessage( "Exception: " + ioe); 
-        } finally {
-            if(out != null){
-            	out.close();
-            }
-            System.out.println("\n--- File Closed ---");
-            //System.out.println(Arrays.deepToString(track.getGrid()));
         }
     }
 	
@@ -210,9 +201,7 @@ public class Blocks{
 		
 		Location[][] obj = track.getGrid();
 		
-		PrintWriter out = null;
-        try {
-            out = new PrintWriter(filename);
+        try (PrintWriter out = new PrintWriter(filename)){
             
             for(int i = 0; i < track.getNumBoxes(); ++i) {
              	if(gameType == GameType.IRRELEVANT_GAME && i == track.getNumBoxes() - 1)
@@ -240,11 +229,6 @@ public class Blocks{
 
         } catch (IOException ioe) {
         	errorMessage( "Exception: " + ioe); 
-        } finally {
-            if(out != null){
-            	out.close();
-            }
-            System.out.println("\n--- Blocks File Closed ---");
         }
     }
 
@@ -276,7 +260,7 @@ public class Blocks{
 			levelOver = false;
 			vacantSlots = 0;
 			readLevelFileForLevel(level);
-			while (!levelOver && !gameQuit) {
+			while (!levelOver) {
 				processSingleCommand(display.getCommandFromUser());
 			}
 			
@@ -345,7 +329,6 @@ public class Blocks{
 				if(JOptionPane.showConfirmDialog(display, "Are you sure you want to quit?", "Confirm Quit", JOptionPane.YES_NO_OPTION)
 						== JOptionPane.YES_OPTION) {
 					quit();
-					display.stop();
 				}
 				return;
 			case Command.Next:
@@ -357,19 +340,12 @@ public class Blocks{
 				replayNum++;
 				replayLevel = true;
 				break;
-			case Command.Jump:
-//				Vector<Move> moves = search.getMovesForLocation(man.getLocation(), cmd.getGoal());
-//				while (moves.size() > 0)
-//				{
-//					man.doMove(moves.remove(0));
-//				}
-				System.out.println(cmd.getGoal());
-				break;
 			case Command.Directional:
-				
-				track.setNextMove(cmd.getMove());
+				if(track != null)
+					track.setNextMove(cmd.getMove());
 				man.move(cmd.getMove());
-				track.copyLocationsNextMove();
+				if(track != null)
+					track.copyLocationsNextMove();
 				break;
 			case Command.Undo:
 				undoLastMove();
@@ -382,8 +358,8 @@ public class Blocks{
 	}
 	
 	public void quit() {
+		levelOver = true;
 		gameQuit = true;
-		display.finishLine();
 	}
 	
 	/**
@@ -395,19 +371,9 @@ public class Blocks{
 	 */
 	private void readLevelFileForLevel(int level)
 	{
-		BufferedReader in;
-		try
-		{
-			InputStream is = this.getClass().getClassLoader().getResourceAsStream("Levels/Level" + level + ".data");
-			in = new BufferedReader(new InputStreamReader(is));
-		}
-		catch (Exception e)
-		{
-			errorMessage("Cannot open file \"Levels/Level" + level + ".data\", " + e);
-			return;
-		}
 
-		try
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("Levels/Level" + level + ".data");
+			BufferedReader in = new BufferedReader(new InputStreamReader(is));)
 		{			
 			
 			int numRows = Integer.valueOf(in.readLine().trim()).intValue();
@@ -509,14 +475,8 @@ public class Blocks{
 		}
 		catch (IOException e)
 		{
-			System.out.println("File improperly formatted, quitting");
+			errorMessage("Error reading file: Levels/Level" + level + ".data, " + e);
 			return;
-		}
-		
-		try {
-			in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -615,16 +575,14 @@ public class Blocks{
 				{"U to B", "N to Q", "S to X", "Y to P", "Y to G", "F to L", "A to E", "K to D", "Q to C", "N to H"},
 				{"Y to R", "E to X", "L to F", "D to K", "W to Q", "C to W", "T to B", "V to P", "H to F", "C to F"},
 				{"S to Y", "X to R", "L to T", "I to R", "V to O", "J to E", "K to Q", "F to C", "Q to W", "D to K"}};
+		final String[] answers = {"1", "5", "3", "2", "4", "4", "6", "5"};
 		
 		int[][] results = new int[prompts.length][];
 		
-		results = display.mapPrompt(prompts);
+		results = display.mapPrompt(prompts, answers);
 		
-		String filename = directory + "/mazeResponses.csv";
-		PrintWriter out = null;
 		
-		try {
-			out = new PrintWriter(filename);
+		try(PrintWriter out = new PrintWriter(directory + "/mazeResponses.csv")) {
 			out.write("map,");
 			for(int i = 0; i < prompts[1].length; ++i) {
 				out.write("response" + i);
@@ -632,7 +590,7 @@ public class Blocks{
 			out.write("\n");
 			
 			for(int i = 0; i < prompts.length; ++i) {
-				out.write(i + ",");
+				out.write((i > 0 ? i : "practice") + ",");
 				for(int resp : results[i]) {
 					out.write(resp + ",");
 				}
@@ -640,11 +598,7 @@ public class Blocks{
 			}
 		}
 		catch (Exception e) {
-			errorMessage("Error writing file: \"" + filename + "\", " + e);
-		}
-		finally {
-			if(out != null)
-				out.close();
+			errorMessage("Error writing file: \"mazeResponses.csv\", " + e);
 		}
 	}
 	
@@ -678,7 +632,6 @@ public class Blocks{
 			});
 			
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
@@ -711,14 +664,14 @@ public class Blocks{
 			     
 			}
 			
-			try(DataInputStream in = new DataInputStream(conn.getInputStream())) {
+			try(BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
 				String str;
+				System.out.println("Upload response: ");
 				while((str = in.readLine()) != null)
 					System.out.println(str);
 			}
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -739,10 +692,80 @@ public class Blocks{
 			e.printStackTrace();
 		}
 		
+		System.out.println(String.format("Directory \"%s\" deleted and uploaded as \"%s\"", dir.getFileName(), zipFname));
 		
 	}
 	
 	private void errorMessage(String message) {
 		JOptionPane.showMessageDialog(display, message, "Error", JOptionPane.ERROR_MESSAGE);
+	}
+
+	public void practiceRound() {
+				
+		gameType = GameType.REGULAR_GAME;
+		level = 0;
+		
+		while (level < 1 && !gameQuit) {
+			
+			levelOver = false;
+			vacantSlots = 0;
+			
+			try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("Levels/PracticeLevel.data");
+				BufferedReader in = new BufferedReader(new InputStreamReader(is));)
+			
+			{			
+				
+				int numRows = Integer.valueOf(in.readLine().trim()).intValue();
+				int numCols = Integer.valueOf(in.readLine().trim()).intValue();
+
+				in.readLine(); //Skip number of boxes, unecessary
+				
+				squares = new Grid(numRows, numCols);
+				
+				display.configurePractice(numRows, numCols);
+				
+				for (int row = numRows - 1; row >= 0; row--)
+				{
+					for (int col = 0; col < numCols; col++)
+					{
+						readOneSquare(new Location(row, col), (char) in.read());
+					}
+
+					// Skip over newline at end of row
+					in.readLine();
+				}
+				
+				for (int row = 0; row < numRows; row++) {
+					for ( int col = 0; col < numCols; col++) {
+						
+						Square sq = squareAt(new Location(row, col));
+						
+						if(sq instanceof Cement) {
+								sq = new Square(sq.getLocation(), this, '\0');
+								squares.setElementAt(sq.getLocation(), sq);
+								sq.drawSelf();
+						}
+					}
+				}
+				
+				display.setVisible(true);
+				display.grabFocus();
+				
+				undoMoveHistory.clear();
+				totalMoves = 0;
+			}
+			catch (IOException e)
+			{
+				errorMessage("Error reading practice level file, " + e);
+				return;
+			}
+			
+			//This is the only thing needed to play the actual game
+			while (!levelOver) {
+				processSingleCommand(display.getCommandFromUser());
+			}
+		}
+		
+		gameQuit = false;
 	}
 }

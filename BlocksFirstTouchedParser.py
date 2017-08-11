@@ -6,52 +6,70 @@
 
 #Generates a 'firstContact.csv' file in each directory
 
-import os, sys, re
+import os, sys, re, zipfile
 
-def find_first_timestamps(fname):
+def find_first_timestamps(f):
 
-        with open(fname) as f:
-                header = f.readline().split(',') #box0x, box0y, box0moved, ... boxNmoved, timestamp, level, condition
-                boxes = (len(header) / 3) - 1
-                stamps = [None] * boxes
-                
-                for line in (l.split(',') for l in f.readlines()):
-                        for i in xrange(len(stamps)):
-                                if stamps[i] == None and line[(3*i)+2] == '1':
-                                        stamps[i] = line[-3]
+        header = f.readline().split(',') #box0x, box0y, box0moved, ... boxNmoved, timestamp, level, condition
+        boxes = (len(header) / 3) - 1
+        stamps = [None] * boxes
+        
+        for line in (map(str.strip, l.split(',')) for l in f.readlines()):
+                for i in xrange(len(stamps)):
+                        level = line[-2]
+                        condition = line[-1]
+                        if stamps[i] == None and line[(3*i)+2] == '1':
+                                stamps[i] = line[-3]
 
-                return stamps
+        return level, condition, stamps
         
 
 root = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
 
-fileRegex = re.compile(r'blocks(\d+[a-z]?)(\w+?).csv')
+out_name = 'firstTimestamps.csv'
 
-for baseDir in [name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name))]:
+fileRegex = re.compile(r'blocks\d+[a-z]?\w+?.csv')
 
-    print 'Parsing levels in directory: ' + baseDir
+for name, baseZip in ((name, zipfile.ZipFile(name, 'a')) for name in os.listdir(root) if zipfile.is_zipfile(name)):
+
+    print 'Parsing levels in file: ' + name
     
-    out_rows = ['level,condition,timestamps\n']
+    out_rows = 'level,condition,timestamps\n'
 
-    for fname in os.listdir(baseDir):
+    tmpZip = zipfile.ZipFile(name + '_tmp', 'w') if out_name in baseZip.namelist() else None
+
+
+    for fname, f in ((fname, baseZip.open(fname)) for fname in baseZip.namelist() if fileRegex.match(fname)):
         
-        match = fileRegex.match(fname)
-        if match:
-            
-            level = match.group(1)
-            condition = match.group(2)
-            
-            try:
-               stamps = find_first_timestamps(os.path.join(baseDir, fname))
+        level, condition, stamps = find_first_timestamps(f)
 
-               out_rows.append(level + ',' + condition + ',' + ','.join(map(str, stamps)) +'\n')
+        out_rows += level + ',' + condition + ',' + ','.join(map(str, stamps)) +'\n'
+
+        if tmpZip:
+                tmpZip.writestr(fname, f.read())
+
+        f.close()
                
-            except IOError as e:
-                print >>sys.stderr, 'Error opening "%s"' % fname
-
-    if len(out_rows) > 1:
-        with open(baseDir + r'\firstContact.csv', 'wc') as f:
-            f.writelines(out_rows)
+    if len(out_rows.split('\n')) > 1:
+        outZip = tmpZip if tmpZip else baseZip
+        outZip.writestr(out_name,out_rows)
                 
     else:
-        print >>sys.stderr, 'No level files found in "%s"' % baseDir
+        print >>sys.stderr, 'No level files found in "%s"' % name
+
+    if tmpZip:
+
+        try:
+                tmpZip.writestr('mazeResponses.csv', baseZip.read('mazeResponses.csv'))
+        except KeyError:
+                pass
+
+        tmpZip.close()
+        baseZip.close()
+        os.remove(name)
+        os.rename(name + '_tmp', name)
+
+    baseZip.close()
+
+
+print 'Discovered timestamps for all zip files in ' + root
