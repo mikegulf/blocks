@@ -162,6 +162,19 @@ public class Blocks{
 		}
     }
 	
+	private void swapSquares(Square sq1, Square sq2) {
+		Location swapLoc = sq1.getLocation();
+		
+		squares.setElementAt(sq1.getLocation(), sq2);
+		squares.setElementAt(sq2.getLocation(), sq1);
+		
+		sq1.setLocation(sq2.getLocation());
+		sq2.setLocation(swapLoc);
+		
+		sq1.drawSelf();
+		sq2.drawSelf();
+	}
+
 	/**
 	 * Write all the moves from the completed level
 	 * @param dir - directory in which to save file
@@ -171,7 +184,8 @@ public class Blocks{
 		
 		String filename;
 		
-		filename = dir + "/" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
+		filename = dir + "/" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") 
+				+ gameType.toString() + dir + ".csv";
 		
         try (PrintWriter out = new PrintWriter(filename)){
             			
@@ -197,7 +211,8 @@ public class Blocks{
 		
 		String filename;
 		
-		filename = dir + "/blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") + gameType.toString() + ".csv";
+		filename = dir + "/blocks" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") 
+				+ gameType.toString() + dir + ".csv";
 		
 		Location[][] obj = track.getGrid();
 		
@@ -552,19 +567,6 @@ public class Blocks{
 				.elementAt(location)) : null);
 	}
 	
-	private void swapSquares(Square sq1, Square sq2) {
-		Location swapLoc = sq1.getLocation();
-		
-		squares.setElementAt(sq1.getLocation(), sq2);
-		squares.setElementAt(sq2.getLocation(), sq1);
-		
-		sq1.setLocation(sq2.getLocation());
-		sq2.setLocation(swapLoc);
-		
-		sq1.drawSelf();
-		sq2.drawSelf();
-	}
-	
 	/**
 	 * Runs the maze test before the actual blocks game
 	 * @param directory - directory to store the output file
@@ -635,48 +637,48 @@ public class Blocks{
 			e1.printStackTrace();
 		}
 		
-		final String CRLF = "\r\n";
-		final String boundary = Long.toHexString(System.currentTimeMillis());
+//		final String CRLF = "\r\n";
+//		final String boundary = Long.toHexString(System.currentTimeMillis());
+//		
+//		
+//				
+//		try {
+//			URLConnection conn = new URL(url).openConnection();
+//			
+//			conn.setDoOutput(true);
+//			conn.setDoInput(true);
+//			conn.setUseCaches(false);
+//			
+//			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+//			
+//			try (OutputStream output = conn.getOutputStream();
+//					PrintWriter writer = new PrintWriter(output)) {
+//				
+//				writer.append("--" + boundary).append(CRLF);
+//			    writer.append("Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + zipFname + "\"").append(CRLF);
+//			    writer.append("Content-Type: application/zip").append(CRLF);
+//			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
+//			    writer.append(CRLF).flush();
+//			    Files.copy((new File(zipFname)).toPath(), output);
+//			    output.flush();
+//			    writer.append(CRLF);
+//			    writer.append("--" + boundary + "--").append(CRLF).flush();
+//			     
+//			}
+//			
+//			try(BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+//				String str;
+//				System.out.println("Upload response: ");
+//				while((str = in.readLine()) != null)
+//					System.out.println(str);
+//			}
+//			
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		
-		
-				
 		try {
-			URLConnection conn = new URL(url).openConnection();
-			
-			conn.setDoOutput(true);
-			conn.setDoInput(true);
-			conn.setUseCaches(false);
-			
-			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-			
-			try (OutputStream output = conn.getOutputStream();
-					PrintWriter writer = new PrintWriter(output)) {
-				
-				writer.append("--" + boundary).append(CRLF);
-			    writer.append("Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + zipFname + "\"").append(CRLF);
-			    writer.append("Content-Type: application/zip").append(CRLF);
-			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
-			    writer.append(CRLF).flush();
-			    Files.copy((new File(zipFname)).toPath(), output);
-			    output.flush();
-			    writer.append(CRLF);
-			    writer.append("--" + boundary + "--").append(CRLF).flush();
-			     
-			}
-			
-			try(BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-				String str;
-				System.out.println("Upload response: ");
-				while((str = in.readLine()) != null)
-					System.out.println(str);
-			}
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		try {
-			Files.delete(new File(zipFname).toPath());
+//			Files.delete(new File(zipFname).toPath());
 			
 			Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 				
