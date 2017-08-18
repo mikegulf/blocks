@@ -20,7 +20,7 @@ public class Cement extends Square {
 	}
 	
 	public boolean canEnter() {
-		return canPush(0);
+		return false;
 	}
 	
 	public boolean canPush(int dir) {
