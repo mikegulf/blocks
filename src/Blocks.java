@@ -31,10 +31,10 @@ public class Blocks{
 	/**
 	 * Maximum allowed number of undo moves. Set to -1 for unlimited.
 	 */
-	public static final int maximumAllowedUndos = 100;
+	//public static final int maximumAllowedUndos = 100;
 
 
-	private Vector<Move> undoMoveHistory = new Vector<Move>();
+	//private Vector<Move> undoMoveHistory = new Vector<Move>();
 
 	private int totalMoves = 0;
 	private Display display;
@@ -50,7 +50,7 @@ public class Blocks{
 	private int replayNum = 0;
 	private boolean replayLevel = false;
 	
-	private boolean gameQuit = false;
+	public boolean gameQuit = false;
 	
 	private GameType gameType;
 	
@@ -74,33 +74,33 @@ public class Blocks{
 	 * Add move to list of all moves from the level
 	 * @param move
 	 */
-	public void addMove(Move move)
-	{
-		undoMoveHistory.add(move);
-		if (undoMoveHistory.size() > maximumAllowedUndos || maximumAllowedUndos == -1)
-		{
-			undoMoveHistory.remove(0);
-		}
-		totalMoves++;
-		
-		if (Blocks.VERBOSE)
-		{
-			System.out.println("Total moves: " + totalMoves);
-		}
-	}
-	
-	/**
-	 * Undo move
-	 */
-	public void undoLastMove()
-	{
-		if (undoMoveHistory.size() > 0)
-		{
-			man.doMove(undoMoveHistory.remove(undoMoveHistory.size() - 1));
-		}
-		
-		totalMoves++;
-	}
+//	public void addMove(Move move)
+//	{
+//		undoMoveHistory.add(move);
+//		if (undoMoveHistory.size() > maximumAllowedUndos || maximumAllowedUndos == -1)
+//		{
+//			undoMoveHistory.remove(0);
+//		}
+//		totalMoves++;
+//		
+//		if (Blocks.VERBOSE)
+//		{
+//			System.out.println("Total moves: " + totalMoves);
+//		}
+//	}
+//	
+//	/**
+//	 * Undo move
+//	 */
+//	public void undoLastMove()
+//	{
+//		if (undoMoveHistory.size() > 0)
+//		{
+//			man.doMove(undoMoveHistory.remove(undoMoveHistory.size() - 1));
+//		}
+//		
+//		totalMoves++;
+//	}
 	
 	/**
 	 * 
@@ -185,7 +185,7 @@ public class Blocks{
 		String filename;
 		
 		filename = dir + "/" + level + (replayLevel ? alphabet.charAt(replayNum - 1) : "") 
-				+ gameType.toString() + dir + ".csv";
+				+ gameType.toString()+ "_" + dir + ".csv";
 		
         try (PrintWriter out = new PrintWriter(filename)){
             			
@@ -201,6 +201,10 @@ public class Blocks{
             	loc = loc.adjacentLocation(((Move)moves[i]).getDirection());
         	}
             out.write(loc + System.lineSeparator());
+            if(vacantSlots == 0)
+            	out.write("Completed");
+            else
+            	out.write("Not Completed");
             
         } catch (IOException ioe) {
         	errorMessage( "Exception: " + ioe); 
@@ -267,6 +271,7 @@ public class Blocks{
 	 */
 	public void play(int numLevels, String dir, GameType gt) {
 		level = 0;
+		int writelevel;
 		
 		gameType = gt;
 		
@@ -280,7 +285,10 @@ public class Blocks{
 			}
 			
 			if(!replayLevel){
-				int writelevel = level - 1;
+				if(gameQuit)
+					writelevel = level;
+				else
+					writelevel = level - 1;
 				openFileForWrite(dir, writelevel);
 				openFileWriteBlocks(dir, writelevel);
 				replayNum = 0;
@@ -289,6 +297,9 @@ public class Blocks{
 				openFileForWrite(dir, currentLevel);
 				openFileWriteBlocks(dir, currentLevel);
 				replayLevel = false;
+			}
+			if(gameQuit){
+				display.finishGame();
 			}
 		}
 	}
@@ -362,9 +373,9 @@ public class Blocks{
 				if(track != null)
 					track.copyLocationsNextMove();
 				break;
-			case Command.Undo:
-				undoLastMove();
-				break;
+//			case Command.Undo:
+//				undoLastMove();
+//				break;
 			case Command.Error:
 				break;
 			default:
@@ -482,7 +493,7 @@ public class Blocks{
 			display.setVisible(true);
 			display.grabFocus();
 			
-			undoMoveHistory.clear();
+			//undoMoveHistory.clear();
 			totalMoves = 0;
 			
 			track.setMan(man);
@@ -613,6 +624,8 @@ public class Blocks{
 		final String url = "https://www.mastergunner.net/blocks/upload.php";
 		final String zipFname = dir.getFileName() + ".zip";
 		
+		
+		if(Files.exists(dir)){
 		//First zip the directory
 		try (FileOutputStream os = new FileOutputStream(zipFname);
 				ZipOutputStream zos = new ZipOutputStream(os)) {
@@ -637,45 +650,46 @@ public class Blocks{
 			e1.printStackTrace();
 		}
 		
-//		final String CRLF = "\r\n";
-//		final String boundary = Long.toHexString(System.currentTimeMillis());
-//		
-//		
-//				
-//		try {
-//			URLConnection conn = new URL(url).openConnection();
-//			
-//			conn.setDoOutput(true);
-//			conn.setDoInput(true);
-//			conn.setUseCaches(false);
-//			
-//			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-//			
-//			try (OutputStream output = conn.getOutputStream();
-//					PrintWriter writer = new PrintWriter(output)) {
-//				
-//				writer.append("--" + boundary).append(CRLF);
-//			    writer.append("Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + zipFname + "\"").append(CRLF);
-//			    writer.append("Content-Type: application/zip").append(CRLF);
-//			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
-//			    writer.append(CRLF).flush();
-//			    Files.copy((new File(zipFname)).toPath(), output);
-//			    output.flush();
-//			    writer.append(CRLF);
-//			    writer.append("--" + boundary + "--").append(CRLF).flush();
-//			     
-//			}
-//			
-//			try(BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-//				String str;
-//				System.out.println("Upload response: ");
-//				while((str = in.readLine()) != null)
-//					System.out.println(str);
-//			}
-//			
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
+		final String CRLF = "\r\n";
+		final String boundary = Long.toHexString(System.currentTimeMillis());
+		
+		
+				
+		try {
+			URLConnection conn = new URL(url).openConnection();
+			
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
+			conn.setUseCaches(false);
+			
+			conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+			
+			try (OutputStream output = conn.getOutputStream();
+					PrintWriter writer = new PrintWriter(output)) {
+				
+				writer.append("--" + boundary).append(CRLF);
+			    writer.append("Content-Disposition: form-data; name=\"uploadedfile\"; filename=\"" + zipFname + "\"").append(CRLF);
+			    writer.append("Content-Type: application/zip").append(CRLF);
+			    writer.append("Content-Transfer-Encoding: binary").append(CRLF);
+			    writer.append(CRLF).flush();
+			    Files.copy((new File(zipFname)).toPath(), output);
+			    output.flush();
+			    writer.append(CRLF);
+			    writer.append("--" + boundary + "--").append(CRLF).flush();
+			     
+			}
+			
+			try(BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+				String str;
+				System.out.println("Upload response: ");
+				while((str = in.readLine()) != null)
+					System.out.println(str);
+			}
+			
+		} catch (IOException e) {
+			System.out.println("No connection");
+			e.printStackTrace();
+		}
 		
 		try {
 //			Files.delete(new File(zipFname).toPath());
@@ -695,7 +709,7 @@ public class Blocks{
 		}
 		
 		System.out.println(String.format("Directory \"%s\" deleted and uploaded as \"%s\"", dir.getFileName(), zipFname));
-		
+		}
 	}
 	
 	private void errorMessage(String message) {
@@ -753,7 +767,7 @@ public class Blocks{
 				display.setVisible(true);
 				display.grabFocus();
 				
-				undoMoveHistory.clear();
+				//undoMoveHistory.clear();
 				totalMoves = 0;
 			}
 			catch (IOException e)

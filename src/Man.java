@@ -25,7 +25,7 @@ class Man extends Thing {
 
 			if (newSquare.pushContents(direction)) {
 				if (!m.getIsUndo()) {
-					game.addMove(undo);
+					//game.addMove(undo);
 					
 				}
 				return newSquare.addContents(this);
@@ -45,7 +45,7 @@ class Man extends Thing {
 				}
 				
 				if (!m.getIsUndo()) {
-					game.addMove(undo);
+					//game.addMove(undo);
 					//Blocks.track.setNextMove();
 				}
 				return returnValue;

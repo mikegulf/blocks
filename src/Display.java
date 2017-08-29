@@ -117,12 +117,8 @@ public class Display extends JApplet
 				"In the game you will use the avatar to push boxes to target locations. You will complete 4 " + 
 				"different sets of tasks, each having 9 levels of increased difficulty. You will be notified at the " + 
 				"completion of the study. " + 
-				"You will be paid $.40 for completing the Map Planning Task and $.03 per level you complete " + 
-				"with a total of up to a total of $1.48 for taking part in this study. The policy for payment will " + 
-				"follow the guidelines through Mechanical Turk. " + 
 				"The entire study should take up to 1 hour to complete. " +
-				"You have the right to obtain answers to any questions you might have about this research both " + 
-				"while you take part in the study and after you leave the research site. Please contact Dr. Kristin " + 
+				"Please contact Dr. Kristin " + 
 				"Schaefer-Lay, Kristin.e.schaefer-lay.civ@mail.mil, if you have any questions or require more information " +
 				"about this study. " + 
 				"You may also contact the Human Protection Administrator (HPA) of the Army Research Laboratory " + 
@@ -140,7 +136,7 @@ public class Display extends JApplet
 		
 		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will " + 
 				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move " + 
-				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to " + 
+				"the correctly labeled blue box to the correctly labeled white target location (i.e., box 1 should be pushed to " + 
 				"target location 1). <b>Please note that the numbers are only to link the box with a target location and " + 
 				"are not a suggested order for moving the boxes.</b>", 
 				
@@ -149,7 +145,7 @@ public class Display extends JApplet
 		
 		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You " + 
 				"will control an avatar through a room by using the arrow keys on your keyboard. The goal is to " + 
-				"move the correctly labeled box to the correctly labeled target location (i.e., box 1 should be " + 
+				"move the correctly labeled blue box to the correctly labeled white target location (i.e., box 1 should be " + 
 				"pushed to target location 1). <b>In this set of levels, you will not know the box label until you push " + 
 				"the box with your avatar. Please note that the numbers are only to link the box with a target " + 
 				"location and are not a suggested order for moving the boxes.</b>",
@@ -159,7 +155,7 @@ public class Display extends JApplet
 		
 		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will " + 
 				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move " + 
-				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to " + 
+				"the correctly labeled blue box to the correctly labeled white target location (i.e., box 1 should be pushed to " + 
 				"target location 1). In this set of levels, you will not know the box label until you push the box " + 
 				"with your avatar. Please note that the numbers are only to link the box with a target location and " + 
 				"are not a suggested order for moving the boxes. <b>In addition, there is an extra box that does not " + 
@@ -170,7 +166,7 @@ public class Display extends JApplet
 		
 		instructionPrompt("In this part of the game, you will be asked to complete 9 levels of increasing difficulty. You will " + 
 				"control an avatar through a room by using the arrow keys on your keyboard. The goal is to move " + 
-				"the correctly labeled box to the correctly labeled target location (i.e., box 1 should be pushed to " + 
+				"the correctly labeled blue box to the correctly labeled white target location (i.e., box 1 should be pushed to " + 
 				"target location 1). In this set of levels, you will not know the box label until you push the box " + 
 				"with your avatar. Please note that the numbers are only to link the box with a target location and " + 
 				"are not a suggested order for moving the boxes. <b>In addition, there is an extra box that does not " + 
@@ -180,9 +176,20 @@ public class Display extends JApplet
 				"Start Set 4");
 		game.play(9, directory.getPath(), Blocks.GameType.IMMOVABLE_GAME);
 		
-		game.uploadAndDelete(directory.toPath());
-		instructionPrompt("Thank you for participating in our research study.", null);
+		
+		finishGame();
+//		game.uploadAndDelete(directory.toPath());
+//		
+//		
+//		instructionPrompt("Thank you for participating in our research study. Please go back to the Amazon Mechanical Turk site and enter this number: " + directory.toString() + ".", null);
 	}
+	
+	public void finishGame(){
+		game.uploadAndDelete(directory.toPath());
+
+		instructionPrompt("Thank you for participating in our research study. Please go back to the Amazon Mechanical Turk site and enter this number: " + directory.toString() + ".", null);
+	}
+	
 	
 	//inner class GridCanvas
     public class GridCanvas extends JPanel
@@ -460,8 +467,7 @@ public class Display extends JApplet
 		textarea.setEditable(false);
 		textarea.setContentType("text/html");
 		textarea.setFont(INSTRUCTION_FONT);
-		textarea.setText("<center>Move with the <b>arrow keys</b>, and <b>U</b> for undo.<br />"
-				+ "To move to a square, where there is a clear path, just click the mouse.<br />"
+		textarea.setText("<center>Move with the <b>arrow keys</b>,"
 				+ "Press <b>N</b> to skip this level, <b>Q</b> to quit, and <b>R</b> to restart this level.</center>");
 		
 		JPanel bp = new JPanel();
@@ -731,7 +737,7 @@ public class Display extends JApplet
 
 					if(++mapLevel == prompts.length) return;
 					
-					JOptionPane.showMessageDialog(app, "Begin Map " + (mapLevel + 1) + "\r\n"
+					JOptionPane.showMessageDialog(app, "Begin Map " + (mapLevel) + "\r\n"
 	    					+ "You will have 3 minutes to complete 10 routes", "Next Map", JOptionPane.INFORMATION_MESSAGE);
 										
 			    	imgLabel.setIcon(
@@ -741,7 +747,7 @@ public class Display extends JApplet
 			    	panel.setLayout(new GridLayout(prompts[mapLevel].length+1,2));
 					for(String prompt : prompts[mapLevel]) {
 			    		panel.add(new JLabel(prompt));
-			    		panel.add(new JSpinner(new SpinnerNumberModel(0, 0, 10, -1)));
+			    		panel.add(new JSpinner(new SpinnerNumberModel(0, 0, 10, 1)));
 			    	}
 					panel.add(button);
 					SwingUtilities.getRootPane(app).setDefaultButton(button);
@@ -853,7 +859,7 @@ public class Display extends JApplet
 						"Thank you for completing the Map Planning Task. You will now be asked to complete the Box\r\n" + 
 						"Moving Game. You will move an avatar around an open room in order to push boxes to target\r\n" + 
 						"locations. You will use the arrow keys to move the avatar. A level is complete once all boxes\r\n" + 
-						"have reached their target locations. The U key will allow you to undo a movement and the R key\r\n" + 
+						"have reached their target locations. The R key\r\n" + 
 						"will allow you to restart a level. You will start by completing a practice round moving 1 box to 1 target location.\r\n" + 
 						"</center></html>");
 				
