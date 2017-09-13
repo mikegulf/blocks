@@ -27,10 +27,10 @@ public class Command {
 			this.type = Directional;
 			this.move = new Move(Move.keyCodeToDirection(keyCode), false);
 			break;
-		case KeyEvent.VK_U:
-			this.type = Undo;
-			this.move = new Move(Move.Undo, true);
-			break;
+//		case KeyEvent.VK_U:
+//			this.type = Undo;
+//			this.move = new Move(Move.Undo, true);
+//			break;
 		case KeyEvent.VK_R:
 			this.type = Replay;
 			break;
